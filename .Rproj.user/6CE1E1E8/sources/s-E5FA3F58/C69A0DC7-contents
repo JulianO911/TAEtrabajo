@@ -1,0 +1,21 @@
+---
+title: "Trabajo 1° TAE"
+author: "Simón Cuartas Rendón, Camilo Fúnez, Julián Ospina Murgueitio, Deivid Zhang Figueroa, Juliana Zuluaga"
+date: "15/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Librerías
+```{r}
+library(readr)
+```
+
+# Lectura de datos
+```{r}
+incidentes_viales <- read_delim("incidentes_viales.csv", delim=";")
+```
+
