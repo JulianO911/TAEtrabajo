@@ -1,0 +1,92 @@
+---
+title: "Trabajo 1° TAE"
+author: "Simón Cuartas Rendón, Camilo Fúnez, Julián Ospina Murgueitio, Deivid Zhang Figueroa, Juliana Zuluaga"
+date: "15/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Librerías
+```{r}
+library(readr)
+require(reshape)
+library(tidyverse)
+library(dplyr)
+```
+
+# Lectura de datos
+```{r}
+incidentes_viales <- read_delim("incidentes_viales.csv", delim=";")
+```
+
+# Análisis exploratorio
+
+## Resumen de la base de datos
+```{r}
+summary(incidentes_viales)
+```
+- Se puede observar presencia de NA´s en la base de datos.
+
+
+## Variables Categóricas
+```{r}
+table(incidentes_viales$CLASE_ACCIDENTE) # Clase de accidentes
+table(incidentes_viales$DISEÑO) # Diseño
+table(incidentes_viales$MES) # Gravedad accidente
+```
+- En la variable clase de accidentes se renombrarán las observaciones "Caida de Ocupante", "Caída de Ocupante" como "Caída Ocupante".
+
+- La variable Diseño se renombrarán las observaciones "Pont\\xF3n" como "Pontón".
+
+- La variable mes posee información incorrecta, se cambia el nombre de dicha variable por Gravedad de accidente. En esta variable hay observaciones llamadas "Solo da\\xF1os", estas se arenombrarán como "Solo daños".
+
+# Transformación de las variables
+```{r}
+incidentes_viales = incidentes_viales[,-c(5,7)] # Se elimina las variables DIRECCION ENCASILLADA y EXPEDIENTE
+
+incidentes_viales = rename(incidentes_viales, c(MES = "Gravedad_accidente")) # Se cambia la variable MES por "Gravedad_ accidente"
+
+incidentes_viales$CLASE_ACCIDENTE[incidentes_viales$CLASE_ACCIDENTE == "Caida Ocupante"] <- "Caída Ocupante"
+incidentes_viales$CLASE_ACCIDENTE[incidentes_viales$CLASE_ACCIDENTE == "Caída de Ocupante"] <- "Caída Ocupante"
+incidentes_viales$DISEÑO[incidentes_viales$DISEÑO == "Pont\\xF3n"] <- "Pontón"
+incidentes_viales$Gravedad_accidente[incidentes_viales$Gravedad_accidente == "Solo da\\xF1os"] <- "Solo daños"
+```
+
+# Gráficas
+
+## Barplot para clase de accidente
+```{r}
+ggplot(incidentes_viales, aes(CLASE_ACCIDENTE)) + 
+  geom_bar(aes(fill = CLASE_ACCIDENTE)) +
+  scale_fill_discrete(name = "Clase de accidente") +
+  labs(title = "CANTIDAD DE ACCIDENTES POR CLASE", x = "Clase de accidente", y = "Cantidad de accidentes") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.2, hjust=1.2)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=11))
+```
+
+## Barplot para dieseño
+```{r}
+ggplot(incidentes_viales, aes(DISEÑO)) + 
+  geom_bar(aes(fill = DISEÑO)) +
+  scale_fill_discrete(name = "DISEÑO") +
+  labs(title = "CANTIDAD DE ACCIDENTES POR DISEÑO", x = "Diseño", y = "Cantidad de accidentes") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.2, hjust=1.2)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=11))
+```
+
+## Barplot para gravedad accidente
+```{r}
+ggplot(incidentes_viales, aes(Gravedad_accidente)) + 
+  geom_bar(aes(fill = Gravedad_accidente)) +
+  scale_fill_discrete(name = "Gravedad accidente") +
+  labs(title = "CANTIDAD DE ACCIDENTES POR GRAVEDAD", x = "Gravedad de accidente", y = "Cantidad de accidentes") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1.2, hjust=1.2)) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(size=11))
+```
+

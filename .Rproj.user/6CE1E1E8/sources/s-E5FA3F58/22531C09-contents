@@ -1,0 +1,272 @@
+---
+title: "explora_taller4"
+author: "Deivid Zhang Figueroa"
+date: "8/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+## Análisis exploratorio del taller 4.
+A continuación, se hará un análisis descriptivo a la encuesta que se realizó a los estudiantes de EDAED.
+
+```{r}
+library(readxl)
+```
+
+### ¿Se vió el primer episodio?
+
+```{r}
+datos_taller1 <- read_excel("Numb3rs_depuradaCorregida_anonimizada.xlsx")
+```
+
+La distribución de frecuencias con respecto si se había visto el primer episodio de la serie numb3rs.
+
+```{r}
+table(datos_taller1$`¿Vió el primer episodio de la primera temporada de Numb3rs?`)
+```
+
+Tabla de distribución de porcentajes de los que vieron el primer episodios de la serie numbers.
+
+```{r}
+t1 <- table(datos_taller1$`¿Vió el primer episodio de la primera temporada de Numb3rs?`)
+p1 <- t1/(sum(t1)) * 100
+p1
+```
+
+### Diagrama de barras en porcentaje de ¿Vió el primer episodio de la primera temporada de Numb3rs?
+
+```{r}
+plot(seq(0, 2.6, length.out = 70), seq(0, 80, length.out = 70), type = "n",
+     main = "Diagrama de barras de haber visto el\n1° episodio de la serie numb3rs",
+     cex.main = 1,
+     axes = FALSE,
+     xlab = "Respuesta",
+     ylab = "Porcentajes")
+rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "snow1")
+abline(h = seq(0,70,10), col = rep("grey60", 8), lty = 3)
+bp1 <- barplot(p1,
+        las = 1,
+        ylim = c(0,70),
+        col = c("firebrick2", "firebrick4"),
+        add = TRUE)
+text(bp1, p1 + 3, labels = paste(round(p1,2), "%"))
+```
+
+En el diagrama de barras, se observa que los que sí han visto el 1° episodio de la serie numb3ers son la mayoría, sin embargo, los que no lo han visto también ocupan un buen porcentaje con casi 40%.
+
+
+### Excusas: ¿por qué no vió el 1° episodio de la serie numb3rs?
+
+Tabla de distribución de frecuencias y de porcentajes de las excusas.
+
+```{r}
+excusas <- with(datos_taller1, c(Excusa01, Excusa02, Excusa03))
+t2 <- sort(table(excusas), decreasing = TRUE)
+t2
+p2 <- t2/(sum(t2)) * 100
+p2
+```
+
+### Diagrama de barras en porcentajes de las excusas del por qué no vieron el 1° episodio de la serie numb3rs.
+
+```{r fig.height=7, fig.width=7}
+parametros_anteriores <- par(no.readonly = TRUE)
+par(mar = parametros_anteriores$mar + c(13,0,0,0)) 
+bp2 <- barplot(p2,
+        space = 6,
+        main = "Excusas",
+        las = 2,
+        ylim = c(0,30),
+        xlab = "",
+        ylab = "Porcentajes",
+        col = c("orangered2"))
+text(bp2, p2 + 1.2, labels = paste(round(p2,1), "%"))
+par(parametros_anteriores)
+```
+
+como se puede notar en la anterior gráfica de excusas, es conveniente representarlas y reclasificarlas, de la siguiente forma: unir todas aquellas excusas que son de tipo técnico y aquellas que no lo son, como se muestra en la siguiente gráfica, esto se hace con el fin de que sea más fácil al momento de analizar el carácter de la problemática del por qué no se pudo ver el 1° episodio de la serie numb3rs.
+
+```{r}
+prob_tec <- p2[1]+p2[6]+p2[8]
+prob_no_tec <- p2[2]+p2[3]+p2[4]+p2[5]+p2[7]+p2[9]+p2[10]+p2[11]+p2[12]
+x1 <- prob_tec
+x2 <- prob_no_tec
+names(x1) <- "Problemas técnicos"
+names(x2) <- "Problemas no técnicos"
+pp3 <- c(x1, x2)
+plot(seq(0, 2.6, length.out = 70), seq(0, 70, length.out = 70), type = "n",
+     main = "Excusas reclasificada",
+     axes = FALSE,
+     xlab = "",
+     ylab = "Porcentajes")
+rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "snow1")
+abline(h = seq(0,70,10), col = rep("grey50", 10), lty = 3)
+bpp3 <- barplot(pp3,
+        las = 1,
+        ylim = c(0,70),
+        col = c("tan", "tan4"),
+        add = TRUE)
+text(bpp3, pp3 + 2.5, labels = paste(round(pp3,2), "%"))
+```
+
+Ahora, es claro que, para los que no vieron el 1° episodio, en su mayoría fueron por problemas no técnicos.
+
+### Ejemplo Charlie
+Tabla de distribución de frecuencias y de porcentajes del dato depurado "Ejemplo Charlie".
+Donde "A y R" significa "Agujeros negros y regadera".
+```{r}
+t3 <- table(datos_taller1$Ejemplo_Charlie)
+t3
+p3 <- t3/sum(t3) * 100
+p3
+```
+
+### Diagrama de barras en porcentejes de "Ejemplo Charlie"
+
+```{r}
+parametros_anteriores <- par(no.readonly = TRUE)
+plot(seq(0, 5, length.out = 100), seq(0, 100, length.out = 100), type = "n",
+     main = "Ejemplo depurada",
+     axes = FALSE,
+     xlab = "Ejemplos",
+     ylab = "Porcentajes")
+rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "snow1")
+abline(h = seq(0,100,10), col = rep("grey60", 10), lty = 3)
+bp3 <- barplot(p3,
+        las = 1,
+        ylim = c(0,100),
+        col = c("tan1", "tan2", "tan3", "tan4"),
+        add = TRUE)
+text(bp3, p3 + 3.5, labels = paste(round(p3,2), "%"))
+par(parametros_anteriores)
+```
+
+En esta gráfica se puede ver que la gran mayoría de los estudiantes dieron con la respuesta acertada.
+
+
+### Tabla de distribución de frecuencias y porcentajes del dato "técnica depurada"
+
+```{r}
+t4 <- table(datos_taller1$Charlietecnicadepurada)
+t4
+p4 <- t4/sum(t4) * 100
+p4
+```
+
+### Diagrma de barras en porcentajes de "técnica depurada"
+
+```{r fig.height=9, fig.width= 8}
+parametros_anteriores <- par(no.readonly = TRUE)
+par(mar = parametros_anteriores$mar + c(13,0,0,0)) 
+bp4 <- barplot(p4,
+        space = 6,
+        main = "Técnica depurada",
+        las = 2,
+        ylim = c(0,70),
+        xlab = "",
+        ylab = "Porcentajes",
+        col = c("yellow2"))
+text(bp4, p4 + 2.8, labels = paste(round(p4,1), "%"))
+par(parametros_anteriores)
+```
+
+Se puede observar claramente que, en este dato hay múltiples respuestas incluyendo N/N, donde la respuesta "Agujeros negros" ocupa la gran mayoría.
+
+### Pregunta Charlie depurada
+Tabla de distribución de frecuencias y de porcentajes "pregunta Charlie depurada"
+
+```{r}
+t5 <- table(datos_taller1$PreguntaCharliedepurada)
+t5
+p5 <- t5/sum(t5) * 100
+p5
+```
+
+### Diagrama de barras en porcentaje de "pregunta Charlie depurada"
+
+```{r fig.height=12, fig.width= 7}
+parametros_anteriores <- par(no.readonly = TRUE)
+par(mar = parametros_anteriores$mar + c(24.5,0,0,0)) 
+bp5 <- barplot(p5,
+        space = 1.5,
+        main = "Pregunta Charlie depurada",
+        las = 2,
+        ylim = c(0,60),
+        xlab = "",
+        ylab = "Porcentajes",
+        col = c("Blue3"))
+text(bp5, p5 + 1, labels = paste(round(p5,1), "%"))
+par(parametros_anteriores)
+```
+
+Claramente, se puede notar que el porcentaje de las primeras dos respuestas tienen un gran valor numérico, haciendo que la tercera respuesta tome poca importancia.
+
+### Razón depurada
+Tabla de distribución de frecuencias y de porcentajes "razón depurada"
+
+```{r}
+t6 <- table(datos_taller1$Razondepurada)
+t6
+p6 <- t6/sum(t6) * 100
+p6
+```
+
+### Diagrama de barras en porcentajes de "razón depurada"
+
+```{r fig.height=12, fig.width=6}
+parametros_anteriores <- par(no.readonly = TRUE)
+par(mar = parametros_anteriores$mar + c(25.5,0,0,0)) 
+bp6 <- barplot(p6,
+        space = 1.5,
+        main = "Razón depurada",
+        las = 2,
+        ylim = c(0,60),
+        xlab = "",
+        ylab = "Porcentajes",
+        col = c("red3"))
+text(bp6, p6 + 1.1, labels = paste(round(p6,1), "%"))
+par(parametros_anteriores)
+```
+
+De la misma forma, se puede presenciar que hay múltiples resultados para esta pregunta, de esta forma, si se toma en cuenta que sólo hay una respuesta correcta (la más específica) para esta pregunta, entonces la mayoría o la gran mayoría de los encuestados habrían equivocado, con un mínimo de 56.9% y un máximo de 98.6%.
+
+
+### "¿Cada cuántos años se podría ganar una vez la lotería el agente del FBI?"
+Tabla de distribución de frecuencias y de porcentajes "¿Cada cuántos años se podría ganar una vez la lotería el agente del FBI?" 
+
+```{r}
+t7 <- table(datos_taller1$`¿Cada cuántos años se podría ganar una vez la lotería el agente del FBI?`)
+t7
+p7 <- t7/sum(t7)*100
+p7
+```
+
+### Diagrama de barras en porcentajes de "¿Cada cuántos años se podría ganar una vez la lotería el agente del FBI?"
+
+```{r fig.height=5, fig.width=10.5}
+plot(seq(0, 64, length.out = 60), seq(0, 60, length.out = 60), type = "n",
+     main = "¿Cada cuántos años se podría ganar una vez la lotería el agente del FBI?",
+     cex.main = 1,
+     axes = FALSE,
+     xlab = "",
+     ylab = "Porcentajes")
+rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],col = "snow1")
+abline(h = seq(0,60,10), col = rep("grey60", 5), lty = 3)
+bp7 <- barplot(p7,
+        las = 2,
+        space = 3.2,
+        ylim = c(0,60),
+        col = c("firebrick3", "orangered2", "yellow2", "tan", "tan4"),
+        add = TRUE)
+text(bp7, p7 + 2, labels = paste(round(p7,2), "%"))
+```
+
+En esta pregunta, se presenta hasta 15 resultados diferentes, la más variada de esta encuesta, sin embargo, la mayoría dieron con la respuesta acertada.
+
+## Conclusión
+Con este taller se puede dar cuenta que, en una encuesta con preguntas abiertas, se es neceario identificar y depurar la información suministrada por los encuestados, para así hacer un análisis exploratorio de los datos de la forma adecuada y eficiente con las herramientas de la estadística que ofrece los softwares (Rstudio) y la estadística en sí.

@@ -1,0 +1,7 @@
+"0","ggplot(incidentes_viales, aes(CLASE_ACCIDENTE)) + "
+"0","  geom_bar(aes(fill = CLASE_ACCIDENTE)) +"
+"0","  scale_fill_discrete(name = ""Clase de accidente"") +"
+"0","  labs(title = ""CANTIDAD DE ACCIDENTES POR CLASE"", x = ""Clase de accidente"", y = ""Cantidad de accidentes"") +"
+"0","  theme(axis.text.x = element_text(angle = 45, vjust = 1.2, hjust=1.2)) +"
+"0","  theme(plot.title = element_text(hjust = 0.5)) +"
+"0","  theme(plot.title = element_text(size=11))"

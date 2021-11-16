@@ -1,0 +1,224 @@
+---
+title: "Encuesta sobre hábitos de estudio 3"
+author: "Kenneth Roy Cabrera Torres"
+date: "Miércoles, 16 de septiembre de 2020"
+output: 
+  html_document: 
+    toc: yes
+    theme: readable
+    css: estilo1.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+options(width = 120)
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+enc_habit <- read.csv2("Encuesta_habitos.csv", 
+                       encoding = "UTF-8",
+                       dec = ".")
+```
+
+## Base de datos original
+
+Primeros seis registros:
+
+```{r}
+head(enc_habit)
+```
+
+Últimos seis registros
+
+```{r}
+tail(enc_habit)
+```
+
+## Depuración y adecuación de la variable fecha de nacimiento.
+
+
+Registros de fechas de nacimiento:
+
+```{r}
+enc_habit$fecha_nac
+```
+
+
+Convertir a tipo fecha las fechas de nacimiento.
+
+```{r}
+fecha_nac1 <- as.Date(enc_habit$fecha_nac, "%d/%m/%Y")
+```
+
+Resultado del primer intento de convertir a tipo fecha.
+
+
+```{r}
+fecha_nac1
+```
+
+Selección de las fechas con problemas.
+
+```{r}
+fechas_con_problemas <- subset(enc_habit, 
+                               subset = is.na(fecha_nac1) | 
+                                 as.integer(format(fecha_nac1, "%Y")) < 1970, 
+                               select = c("consecutivo", "fecha_nac"))
+fechas_con_problemas
+```
+
+Propuesta de imputación.
+
+```{r}
+fechas_con_problemas$fecha_nac_correcta <- c("05/09/1999", "08/10/1996",
+                                             "06/03/2020", "01/07/1994",
+                                             "01/01/2000", "07/10/2003",
+                                             "17/09/1992", "12/08/2020",
+                                             "12/05/1998", "21/06/1983",
+                                             "12/08/2020", "28/09/1956",
+                                             "09/06/1999", "10/09/2002",
+                                             "20/06/1994")
+```
+
+
+```{r}
+fechas_con_problemas
+```
+
+Resultado de la imputación de las fechas de nacimiento.
+
+```{r}
+enc_habit$fecha_nac[fechas_con_problemas$consecutivo] <- 
+  fechas_con_problemas$fecha_nac_correcta
+```
+
+```{r}
+enc_habit$fecha_nac <- as.Date(enc_habit$fecha_nac)
+summary(enc_habit)
+```
+
+## Cáculo de la edad.
+
+```{r}
+enc_habit$edad <- as.numeric(as.Date("31/12/2020") - enc_habit$fecha_nac)/365.25
+summary(enc_habit$edad)
+```
+## Uso de expresiones regulares para unificar las carreras.
+
+Ejemplo del uso de expresiones regulares para unificar las carreras.
+
+```{r, echo=TRUE}
+carreras_unicas <- unique(gsub("\\.|ING[\\.|A-Z]*|EN|DE|E INF[A-Z]*", 
+            "", iconv(toupper(enc_habit$carrera),to="ASCII//TRANSLIT")))
+carreras_unicas <- unique(gsub("^ +| $", "",carreras_unicas))
+carreras_unicas
+```
+## Conversión a tipo "factor" las variables alfanuméricas.
+
+Conversión a tipo factor de dos variables:
+
+```{r, echo=TRUE}
+enc_habit$computador_mesa <- factor(enc_habit$computador_mesa)
+enc_habit$portatil <- factor(enc_habit$portatil)
+```
+
+```{r}
+summary(enc_habit)
+```
+
+Conversión de todos los tipos "character" a "factor".
+
+```{r}
+for (i in 1:ncol(enc_habit)){
+  if(is.character(enc_habit[, i])){
+    enc_habit[, i] <- factor(enc_habit[, i])
+  }
+}
+```
+
+Resultado de la conversión a tipo "factor".
+
+```{r}
+summary(enc_habit)
+```
+
+## Adecuación de la base de datos de acuerdo a los hábitos de estudio.
+
+```{r}
+enc_habit_largo <-  pivot_longer(enc_habit, habito_1:habito_17,
+               names_to = "num_habito",
+               values_to = "habito",
+               values_drop_na = TRUE)
+```
+
+
+```{r}
+head(enc_habit_largo, 20)
+```
+
+Cálculo de la mediana por hábito de estudio:
+
+```{r}
+mediana_PAPA <- median(enc_habit$PAPA, na.rm = TRUE)
+t1 <- tapply(enc_habit_largo$PAPA, enc_habit_largo$habito, median, na.rm = TRUE)
+t1
+```
+Ordenadas las medianas de menor a mayor:
+
+```{r}
+t1 <- sort(t1, decreasing = FALSE)
+t1
+```
+
+```{r}
+enc_habit_largo$habito <- factor(enc_habit_largo$habito,
+                                 levels = names(t1))
+```
+
+## Gráfica de los hábitos de estudio ordenado por la mediana.
+
+```{r, fig.height=8, fig.width=10}
+param_ant <- par(no.readonly = TRUE)
+par(mar = param_ant$mar + c(0, 30, 0, 0))
+boxplot(PAPA ~ habito, data = enc_habit_largo, las = 1,
+        xlab = "Promedio Académico Ponderado Acumulado", ylab = "", 
+        varwidth = TRUE,
+        horizontal = TRUE,
+        notch = TRUE,
+        cex.text = 0.7,
+        col = "cornsilk3")
+abline(v = mediana_PAPA, col = "darkblue", lwd = 2)
+par(param_ant)
+```
+
+## Gráfica con cruce de variables.
+
+```{r}
+ggplot(enc_habit, aes(estrato, PAPA, col = genero)) +
+  geom_point(size = 2) +
+  geom_smooth(se = FALSE)
+```
+
+
+```{r}
+ggplot(enc_habit, aes(estrato, PAPA, col = genero)) +
+  geom_jitter(size = 2, height = 0, width = 0.2) +
+  geom_smooth(se = FALSE)
+```
+
+## Tabla con cruce de variables.
+
+
+```{r}
+t2 <- with(enc_habit, tapply(PAPA, list(genero, estrato), mean, na.rm = TRUE))
+knitr::kable(t2)
+```
+
+
