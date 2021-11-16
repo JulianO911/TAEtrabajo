@@ -1,0 +1,3 @@
+"0","accidentes <- accidentes %>% "
+"0","  mutate(DIRECCION = str_trim(DIRECCION))"
+"0","unicos_dir <- length(unique(accidentes$DIRECCION))"

@@ -1,0 +1,5 @@
+"0","g5 <- ggplot(data = accidentes, aes(x = as.Date(FECHA,"
+"0","                                         format = ""%Y-%m-%d""))) +"
+"0","  stat_count() +"
+"0","  theme_minimal()"
+"0","ggplotly(g5)"

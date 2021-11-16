@@ -1,0 +1,3 @@
+"0","dobles_exp4 <- dobles_exp2[!(dobles_exp2$DISEÑO == ""Desconocido""), ]"
+"0","dobles_exp5 <- dobles_exp4 %>% "
+"0","  distinct(EXPEDIENTE, .keep_all = TRUE)"

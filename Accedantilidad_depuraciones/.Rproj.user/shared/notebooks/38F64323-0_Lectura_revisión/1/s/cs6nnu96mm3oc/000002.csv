@@ -1,0 +1,2 @@
+"0","accidentes <- accidentes %>% "
+"0","  mutate(FECHA_ACCIDENTE = as.POSIXct(FECHA_ACCIDENTE, format = ""%d/%m/%Y %H:%M:%S""))"

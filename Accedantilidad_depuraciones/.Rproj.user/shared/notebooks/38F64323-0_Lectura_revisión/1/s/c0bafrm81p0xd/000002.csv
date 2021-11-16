@@ -1,0 +1,3 @@
+"0","repetidos_exp <- accidentes %>% "
+"0","  group_by(EXPEDIENTE) %>% "
+"0","  filter(n() > 1)"

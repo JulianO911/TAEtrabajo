@@ -1,0 +1,1 @@
+"0","accidentes[c(""X"", ""Y"")] <- str_split_fixed(accidentes$LOCATION, "", "", 2)"

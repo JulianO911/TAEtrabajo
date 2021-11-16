@@ -1,0 +1,3 @@
+"0","# Cambio de las T por un espacio"
+"0","accidentes <- accidentes %>% "
+"0","  mutate(FECHA_ACCIDENTES = gsub(""T"", "" "", FECHA_ACCIDENTES))"

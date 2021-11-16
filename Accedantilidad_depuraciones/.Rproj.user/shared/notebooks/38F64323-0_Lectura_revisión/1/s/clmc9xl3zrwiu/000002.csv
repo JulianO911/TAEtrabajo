@@ -1,0 +1,3 @@
+"0","accidentes$EXPEDIENTE[substr(accidentes$EXPEDIENTE, 1, 1) != ""A""] <- ""No reportado"""
+"0","# accidentes <- accidentes %>% "
+"0","#   mutate(EXPEDIENTE = as.factor(EXPEDIENTE))"

@@ -1,0 +1,5 @@
+"0","accidentes$FECHA <- as.Date(accidentes$FECHA_ACCIDENTE)"
+"0","accidentes$HORA <- format(as.POSIXct(accidentes$FECHA_ACCIDENTE),"
+"0","                          format = ""%H:%M:%S"")"
+"0","accidentes$HORAS <- format(as.POSIXct(accidentes$FECHA_ACCIDENTES),"
+"0","                          format = ""%H:%M:%S"")"

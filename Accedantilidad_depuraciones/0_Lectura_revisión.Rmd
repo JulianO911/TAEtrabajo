@@ -1,0 +1,330 @@
+---
+title: "Accidentalidad en Medellín"
+subtitle: "Análisis de la accidentalidad vial en Medellín entre los años 2018 y 2020"
+author: "Simón Cuartas Rendón"
+date: "13/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r Paquetes, include = FALSE, warning=FALSE}
+library("tidyverse")
+library("kableExtra")
+```
+
+
+## Introducción
+
+Se va a realizar un análisis descriptivo de una base de datos publicada por la Secretaría de Movilidad del municipio de Medellín que incluye un reporte de los accidentes de tránsito ocurridos en tal municipio entre el 14 de julio de 2014 hasta el 31 de agosto de 2020.
+
+## Generalidades de la base de datos
+
+```{r Carga del paquete}
+incidentes <- read.csv("incidentes_viales.csv", header = TRUE, sep = ";", dec = ".", encoding = "UTF-8")
+```
+
+# Aspectos generales
+
+A continuación se puede visualizar un resumen de la estructura de estructura de los datos:
+
+```{r Estructura}
+estructura <- glimpse(incidentes)
+```
+
+La base de datos tiene un total de diecisiete columnas, las cuales describen, para cada uno de los incidentes viables observados en la ciudad de Medellín, las siguientes características:
+
+- Año.
+- CBML.
+- Clase de accidente.
+- Dirección.
+- Dirección encasillada.
+- Diseño.
+- Expediente.
+- Fecha de accidente.
+- Fecha accidentes.
+- Mes.
+- Número radicado.
+- Número columa.
+- Barrio.
+- Comuna.
+- Locación.
+- X.
+- Y.
+
+Sin embargo, aquí se evidencia un primer inconveniente y es que a partir de la columna "MES" se presenta un desfase entre el nombre de la variable de la columna y la información que realmente se contempla. Así, por ejemplo, se tiene que en "MES" se está describiendo si en un accidente hubo heridos, daños materiales o fallecimientos, mientras que para la característica "COMUNA" en realidad se está describiendo el barrio en el que se dio el incidente, por lo que se procede a su arreglo.
+
+```{r Cambio de nombre a columbinas}
+accidentes <- incidentes %>%
+  rename(GRAVEDAD = MES,
+         MES = NRO_RADICADO,
+         NRO_RADICADO = NUMCOMUNA,
+         NUMCOMUNA = BARRIO,
+         BARRIO = COMUNA,
+         COMUNA = LOCATION,
+         LOCATION = X,
+         UNKNOWN = Y)
+
+```
+
+Y al revisar de nuevo la base de datos:
+
+```{r}
+glimpse(accidentes)
+```
+
+Y como se puede ver, la base de datos tiene más sentido ahora. Sin embargo, es pertinente realizarle algunas correcciones a esta.
+
+# Correcciones a variables
+
+## Fecha accidentes
+
+La variable ***FECHA_ACCIDENTES*** debe tener formato de fecha tipo AAAA-MM-DD hh:ss según la ficha técnica de esta base de datos disponible en MeData. No obstante, en esta se tienen algunas imprecisiones, como una "T" que se ubica entre el día (AAAA-MM-DD) y la hora (hh:ss) de ocurrencia del incidente vial, así como la presencia de un "0Z" al final de todas las observaciones de esta variable, y con eso es posible transformar dicha variable a formato fecha.
+
+```{r}
+# Eliminación de los 0z
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = substring(FECHA_ACCIDENTES, 1, nchar(FECHA_ACCIDENTES)-5))
+```
+
+```{r}
+# Cambio de las T por un espacio
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = gsub("T", " ", FECHA_ACCIDENTES))
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = as.POSIXct(FECHA_ACCIDENTES))
+```
+
+Y de manera semejante para la fecha registrada en el formato IPAD, que es la hora en la que efectivamente se registró el accidente por parte del agente de tránsito que atendió el caso y que se asociada a la variable ***HORA_ACCIDENTE**:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTE = as.POSIXct(FECHA_ACCIDENTE, format = "%d/%m/%Y %H:%M:%S"))
+```
+
+# Año
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(AÑO = as.factor(AÑO))
+levels(accidentes$AÑO)
+```
+Como se puede observar, algunas observaciones relacionadas con el año 2019 tiene un error, ya que algunas están etiquetadas como "***2019\\r***", por lo que se va a hacer la corrección
+
+```{r} 
+levels(accidentes$AÑO)[levels(accidentes$AÑO) == "2019\\r"] <- "2019"
+```
+
+# Clase de accidentes
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = as.factor(CLASE_ACCIDENTE)) %>% 
+  mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
+                           "Caída Ocupante" = "Caída del ocupante",
+                           "Caida de Ocupante" = "Caída del ocupante",
+                           "Caída de Ocupante" = "Caída del ocupante",
+                           "Caida Ocupante" = "Caída del ocupante"))
+levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- "Desconocido"
+levels(accidentes$CLASE_ACCIDENTE)
+```
+# Dirección
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION = str_trim(DIRECCION))
+unicos_dir <- length(unique(accidentes$DIRECCION))
+```
+
+Se registran `r unicos_dir` direcciones únicas.
+
+# Dirección encasillada
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION.ENCASILLADA = str_trim(DIRECCION.ENCASILLADA))
+unicos_dir.enc <- length(unique(accidentes$DIRECCION.ENCASILLADA))
+```
+
+Se registan `r unicos_dir.enc` direcciones encasilladas únicas.
+
+# Diseño
+
+Esta variable registra el tipo de vía en la cual sucedió el accidente que está siendo observado.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = as.factor(DISEÑO))
+levels(accidentes$DISEÑO)
+```
+Se corrigen los niveles de medición para esta variable
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = recode(DISEÑO,
+                         "Ciclo Ruta" = "Ciclorruta",
+                         "Interseccion" = "Intersección",
+                         "Lote o Predio" = "Lote o predio",
+                         "Paso a Nivel" = "Paso a nivel",
+                         "Paso Elevado" = "Paso elevado",
+                         "Paso Inferior" = "Paso inferior",
+                         "Tramo de via" = "Tramo de vía",
+                         "Tunel" = "Túnel",
+                         "Via peatonal" = "Vía peatonal"))
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == ""] <- "Desconocido"
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == "Pont\\xF3n"] <- "Pontón"
+```
+
+# Expediente
+
+```{r}
+unicos_exp <- length(unique(accidentes$EXPEDIENTE))
+```
+
+En la base de datos existen `r unicos_exp` expedientes únicos, lo que quiere decir que hay `r 270765 - unicos_exp` expedientes repetidos.
+
+```{r}
+repetidos_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+```
+
+Al hacer la revisión de los expedientes repetidos, se observa que algunos de ellos parecen tener el expediente duplicado debido a que no lo tienen y son reportados como "No reportados".
+
+Se cambian los expedientes que no comienzan con la letra "A" como no reportados.
+
+```{r}
+accidentes$EXPEDIENTE[substr(accidentes$EXPEDIENTE, 1, 1) != "A"] <- "No reportado"
+# accidentes <- accidentes %>% 
+#   mutate(EXPEDIENTE = as.factor(EXPEDIENTE))
+```
+
+
+``` {r}
+dobles_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+dobles_exp2 <- dobles_exp[!(dobles_exp$EXPEDIENTE == "No reportado"), ]
+triples_exp <- dobles_exp %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 2)
+```
+
+Se observa que hay 898 casos en los que hay duplicación de expedientes, de los cuales dos son triplicaciones (A000311508 y A000311508). Además, llama la atención que en la mayoría de los que tiene duplicaciones, tienen uno con el diseño de vía bien definido y otro desconocido, pero todos los demás datos son iguales o bastante similares, en el sentido que difieren por algo mínimo que no permite sospechar que se trate de un evento observado diferente. Así, se procede a remover a las observaciones con diseño desconocido.
+
+```{r}
+dobles_exp4 <- dobles_exp2[!(dobles_exp2$DISEÑO == "Desconocido"), ]
+dobles_exp5 <- dobles_exp4 %>% 
+  distinct(EXPEDIENTE, .keep_all = TRUE)
+```
+
+Y las observaciones que están en dobles_exp5 son las que se van a conservar.
+
+```{r}
+library("sqldf")
+removibles <- sqldf('SELECT * FROM dobles_exp2 EXCEPT SELECT * FROM dobles_exp5')
+```
+
+```{r}
+accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM removibles')
+```
+
+# Gravedad
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD = as.factor(GRAVEDAD))
+levels(accidentes$GRAVEDAD)
+```
+
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD = recode(GRAVEDAD,
+                           "Solo da\\xF1os" = "Solo daños"))
+levels(accidentes$GRAVEDAD)
+```
+
+```{r}
+sum(is.na(accidentes$GRAVEDAD))
+```
+# Número de radicado
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NRO_RADICADO = format(NRO_RADICADO, scientific = F))
+```
+
+# Número de comuna
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = as.factor(NUMCOMUNA))
+levels(accidentes$NUMCOMUNA)
+```
+
+Los números de comunas tienes inconsistencias. Por ejemplo: "01" y "1". Se corrige para conservar solo el número de dígitos necesarios.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = recode(NUMCOMUNA,
+                            "01" = "1",
+                            "02" = "2",
+                            "03" = "3",
+                            "04" = "4",
+                            "05" = "5",
+                            "06" = "6",
+                            "07" = "7",
+                            "08" = "8",
+                            "09" = "9",
+                            "SN" = "Sin información",
+                            "Sin Inf" = "Sin información",
+                            "0" = "Sin información"))
+levels(accidentes$NUMCOMUNA)
+```
+# Barrio
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(BARRIO = as.factor(BARRIO))
+levels(accidentes$BARRIO)
+```
+
+# Coordenadas
+
+```{r}
+accidentes[c("X", "Y")] <- str_split_fixed(accidentes$LOCATION, ", ", 2)
+```
+
+```{r}
+options(digits = 10)
+accidentes <- accidentes %>% 
+  mutate(X = substring(X, 2)) %>% 
+  mutate(Y = substring(Y, 1, nchar(Y) - 1)) %>% 
+  mutate(X = as.numeric(X)) %>% 
+  mutate(Y = as.numeric(Y))
+```
+
+```{r}
+accidentes$FECHA <- as.Date(accidentes$FECHA_ACCIDENTE)
+accidentes$HORA <- format(as.POSIXct(accidentes$FECHA_ACCIDENTE),
+                          format = "%H:%M:%S")
+accidentes$HORAS <- format(as.POSIXct(accidentes$FECHA_ACCIDENTES),
+                          format = "%H:%M:%S")
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  select(-c(LOCATION))
+```
+
+```{r}
+save(accidentes, file="incidentes.RData")
+rm(list = ls())
+```
+

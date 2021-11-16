@@ -1,0 +1,4 @@
+"0","load(incidentes.RData)
+"
+"2","Error in load(incidentes.RData) : object 'incidentes.RData' not found
+"

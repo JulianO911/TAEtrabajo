@@ -1,0 +1,2 @@
+"0","accidentes <- accidentes %>% "
+"0","  select(-c(LOCATION))"

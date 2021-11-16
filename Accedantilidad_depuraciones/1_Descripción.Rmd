@@ -1,0 +1,228 @@
+---
+title: "Descripción de la accidentalidad en Medellín"
+author: "Simón Cuartas Rendón"
+date: "Noviembre de 2021"
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
+---
+<style type="text/css">
+.main-container {
+  max-width: 2500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+<style>
+body {
+text-align: justify}
+</style>
+
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+/* Headers */
+h1,h2,h3,h4,h5,h6{
+  font-size: 24pt;
+}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+```
+
+# Breve introducción
+
+En este documento se abordará una breve descripción relaciondada con la base de datos sobre la accidentalidad vehicular en la ciudad de Medellín entre los años 2014 y 2020, haciéndo énfasis en las variables más relevantes de esta base de datos como lo son la fecha de ocurrencia, las comunas y los barrios en los que se dan los incidentes y el tipo de accidentalidad sucedida, entre otros. Esto con el propósito de tener un acercamiento inicial a esta base de datos como parte del primer proyecto del curso de ***Técnicas de Aprendizaje Estadístico*** del semestre 2021-2 de la Universidad Nacional de Colombia, sede Medellín.
+
+```{r Lectura de paquetes, include = FALSE}
+library("tidyverse")
+library("kableExtra")
+library("plotly")
+library("summarytools")
+library("DT")
+library("iClick")
+library("lubridate")
+```
+
+```{r Lectura de la base de datos}
+load("incidentes.RData")
+```
+
+```{r}
+glimpse(accidentes)
+```
+
+# Descripción general de la base de datos
+
+La base de datos de accidentalidad de Medellín recoge todos los accidentes que sucedieron en la ciudad de Medellín, Antioquia (Colombia) entre el lunes 14 de julio de 2014 y el lunes 31 de agosto de 2020, recogiendo algunos aspectos de cada uno de estos incidentes viales como la clase de accidente observado, la dirección en la que ocurrió, el código del expediente y su número de radicado, la fecha y hora y la ubicación en coordenadas geográficas. En general, las variables a considerar por esta base de datos son las siguientes:
+
+- *Año.* Año en el que sucedió el incidente.
+- *CBML.*	Código catastral que corresponde al código, comuna, barrio, manzana, lote catastral de un predio.
+- *Clase de accidente.* Clasificación del IPAT sobre la clase de accidente de transito: choque, atropello, volcamiento, caida de ocupante, incendio, u otro (que no corresponde a las anteriores 5 clasificaciones, p. ej: sumersión).
+- *Dirección.* Dirección donde ocurrió el incidente.
+- *Dirección encasillada.*	Dirección encasillada que entrega el geocodificador.
+- *Diseño.* Sitio de la vía donde ocurrió el accidente: ciclorruta, glorieta, intersección, lote o predio, paso a nivel, paso elevado, paso inferior, pontón, puente, tramo de vía, Túnel, vía peatonal.
+- *Expediente.*	Consecutivo que asigna UNE, según el orden de llegada de los expedientes para su diligenciamiento.
+- *Fecha del accidente.* Fecha del accidente, proviene del IPAT - Informe Policial de Accidente de Tránsito.
+- *Fecha de accidentes.* Fecha de los accidente (formato YYYY-MM-DD hh:mi:ss), proviene del IPAT - Informe Policial de accidentes de Tránsito.
+- *Gravedad del accidente.* Clasificación del IPAT - Informe Policial de Accidentes de Tránsito, sobre la gravedad del accidente, corresponde al resultado más grave presentado en el accidente. Daños materiales:  solo daños; accidente con heridos: herido; accidente con muertos: muerto. No indica cantidad.
+- *Mes.* Mes de ocurrencia del incidente vial.
+- *Número de radicado.* Consecutivo que asigna UNE según el orden de llegada de los expedientes para su diligenciamiento.
+- *Número de la comuna.* Número de la comuna en la que ocurrió incidente vial.
+- *Barrio.* Barrio de ocurrencia del incidente vial.
+- *Comuna.* Denominación con la cual se identifica cada comuna o corregimiento. 1:Popular, 2:Santa Cruz, 3: Manrique, 4: Aranjuez, 5: Castilla, 6: Doce de Octubre, 7: Robledo, 8: Villa Hermosa, 9: Buenos Aires, 10: La Candelaria, 11: Laureles - Estadio, 12: La América, 13: San Javier, 14: El Poblado, 15: Guayabal 16: Belén, 50: San Sebastián de Palmitas, 60: San Cristóbal, 70: Altavista, 80: San Antonio de Prado, 90: Santa Elena, 99: Toda la ciudad.
+- *X.* Coordenada X en metros del accidente, en sistema de coordenadas MAGNA Medellín local.
+- *Y.* Coordenada Y en metros del accidente, en sistema de coordenadas MAGNA Medellín Local.
+
+Además, para facilidad con el manejo de las fechas, se separó la fecha de la hora de los accidentes en la base de datos de trabajo.
+
+# Descripción general
+
+A continuación se puede observar una descripción general de las variables más importantes de esta base de datos.
+
+```{r Resumen de todas las variables}
+print(dfSummary(accidentes), method = "render")
+```
+# Año
+
+A continuación se observa una tabla de frecuencias para los años de los incidentes registrados en la base de datos de incidentes.
+
+```{r Tabla de frecuencias para el año}
+datatable(freq(accidentes$AÑO))
+```
+
+Como se observa, los años 2015 a 2019 tienen aproximadamente la misma cantidad de observaciones en cada uno de ellos, lo cual es de esperar porque para todos ellos se cubre la totalidad del año, mientras que para los años 2014 y 2020 solo se cubre una parte de ellos. En todo caso, es interesante observar que el año en el que más accidentes se observaron fue el 2016, con 46,989 incidentes en total, lo cual representa el 17.38 % del total de observaciones. Gráficamente, se puede visualizar mediante el siguiente gráfico de barras:
+
+```{r Gráfico de barras para el año}
+g1 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = AÑO)) +
+  ggtitle("Frecuencia de accidentes por año",
+          subtitle = "Número de accidentes sucedidos por año en la ciudad de Medellín, Antioquia\nentre los años 2014 y 2020") +
+  xlab("Año") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal()
+ggplotly(g1)
+```
+
+# Clase de accidente
+
+La clase de accidente es una variable categórica de orden nominal que define de forma generar las características del incidente observado, de manera que esta variable puede asumir cualquiera de los siguientes niveles:
+
+- Choque
+- Atropello
+- Volcamiento
+- Caída del ocupante
+- Incendio
+- Otro
+
+Teniendo esto presente, se puede definir la siguiente tabla de frecuencias para esta base de datos:
+
+```{r Tabla de frecuencias para la clase de accidentes}
+datatable(freq(accidentes$CLASE_ACCIDENTE))
+```
+
+De la tabla anterior se puede observar que el tipo de accidente más frecuente es el choque, pues se observaron un total de 180,410 incidentes de tráfico que involucraron a este tipo de colisiones, lo que representa al 66.74 %  de los accidentes, lo cual es llamativo porque resulta más de dos terceras partes de todos los incidentes ocurridos en la ciudad de Medellín entre el año 2014 y 2020. A continuación se tienen a los incidentes que no clasifican en ninguna de las categorías propuestas por Informe Policial de Accidentes de Tránsito, IPAT, es decir, los que se etiquetan como "***otro***", dado que el 11,11 % de los incidentes registrados clasifican en esta categoría. En tercer lugar se tiene a los atropellamientos que abarcan al 9.36 % de los accidentes de tránsito observados en Medellín en el periodo mencionado. Por último, vale destacar que el tipo de incidente menos frecuente de todos es el que involucra a incendios, ya que durante este periodo solo sucedieron 35 eventos de este tipo, lo cual se evidencia en el siguiente gráfico de barras, pues la barra asociada a este tipo de incidente ni siquiera es apreciable, toda vez que las colisiones opacan al resto por su alta frecuencia relativa.
+
+```{r Gráfico de barras para la clase de accidentes}
+g2 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = CLASE_ACCIDENTE)) +
+  ggtitle("Frecuencia de la clase de accidente",
+          subtitle = "Frecuencia de los tipos de accidentes sucedidos en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Clase de accidente") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g2)
+```
+
+# Diseño
+
+Uno de los aspectos más importantes a la hora de evaluar un incidente de tránsito es caracterizar el tipo de espacio en el que sucedió el accidente en términos de la infraestructura física, y esta característica es determinada en la base de datos en la variable "***diseño***", que resulta siendo una variable categórica con un nivel nominal, y se describen los siguientes tipos de infraestructura:
+
+- Ciclorruta.
+- Glorieta.
+- Intersección.
+- Lote o predio.
+- Paso a nivel.
+- Paso elevado.
+- Paso inferior.
+- Pontón.
+- Puente.
+- Tramo de vía.
+- Túnel.
+- vía peatonal.
+
+Y una tabla de frecuencias relacionada a esta variable es la siguiente:
+
+```{r Tabla de frecuencias para el diseño}
+datatable(freq(accidentes$DISEÑO))
+```
+
+Revisando la tabla anterior se tiene que la infraestructura vial en la que más incidentes de tránsito sucedieron en Medellín entre el 2014 y el 2020 es el ***tramo de vía***, pues en estos se dieron el 69,29 % del total de accidentes observados en la ciudad de Medellín en el periodo mencionado, lo cual es bastante lejano al resto de incidentes. Además, es llamativo observar que el segundo tipo de infraestructura donde más incidentes se dieron son las intersecciones, donde ocurrieron el 16.25 % de los incidentes. Además, donde menos incidentes ocurrieron fue en los pasos inferiores, ya que únicamente el 0.25 % de los accidentes ocurrieron en este tipo de vías.
+
+```{r Gráfico de barras para el diseño}
+g3 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = DISEÑO)) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g3)
+```
+
+# Fecha
+
+```{r}
+g5 <- ggplot(data = accidentes, aes(x = as.Date(FECHA,
+                                         format = "%Y-%m-%d"))) +
+  stat_count() +
+  theme_minimal()
+ggplotly(g5)
+```
+
+# Mes
+
+```{r Tabla de frecuencias para el mes}
+datatable(freq(accidentes$MES))
+```
+
+```{r}
+g6 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = MES)) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g6)
+```
+
+# Comuna
+
+```{r Tabla de frecuencias para la comuna}
+datatable(freq(accidentes$MES))
+```
+
+```{r}
+g7 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = COMUNA)) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g7)
+```
+
+# Barrio
+
+```{r Tabla de frecuencias para el barrio}
+datatable(freq(accidentes$BARRIO))
+```
