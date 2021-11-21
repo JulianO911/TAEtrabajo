@@ -1,0 +1,677 @@
+---
+title: "Depuración de la base de datos"
+author: "Equipo, TAE"
+date: "Diciembre 2 de 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r Paquetes a emplear, include = FALSE, warning = FALSE}
+library("DT")
+library("kableExtra")
+library("tidyverse")
+library("knitr")
+library("sqldf")
+```
+
+
+# Introducción
+
+En el marco del curso de **Técnicas de Aprendizaje Estadístico** de la Universidad Nacional de Colombia, sede Medellín, se pretende analizar la base de datos de accidentalidad vial en la ciudad de Medellín entre los años 2014 y 2020 con el objetivo de realizar predicciones a partir de este documento para los años 2020 y 2021. Para ello, se va a comenzar realizando una exploración de la base de datos que permita hallar inconsistencias, problemas, datos faltantes y errores, entre otros, con la base de datos, de tal manera que pueda ser organizada para poderla emplear adecuadamente en función de los objetivos de este proyecto.
+
+# Lectura de la base de datos
+
+
+```{r}
+incidentes <- read.csv("incidentes_viales.csv", header = TRUE, sep = ";", dec = ".", encoding = "UTF-8")
+```
+
+A continuación se va a mostrar cuál es la estructura de la base de datos que es descargada directamente del portal MeData
+
+```{r Estructura inicial de la base de datos, echo = FALSE, warning = FALSE}
+glimpse(incidentes)
+filas <- nrow(incidentes)
+```
+
+Y como se observa, esta base de datos posee un total de `r filas`, cada una con diecisiete características: año, CBML, clase de accidente, dirección, dirección encasillada, diseño, expediente, fecha de accidente, fecha de accidentes, mes, número de radicado, número de coomuna, barrio, comuna, ubicación, coordenada x de la ubicación y coordenada y de la ubicación. Revisando esto, se comienzan a notar un par de inconvenientes con la base de datos: el primero es que es hay diecisiete variables a pesar de que el reporte de MeData incluye dieciocho variables en total, y lo segundo es que a partir de la variable titulada como *mes* hay un error en el nombre de las columnas. Nótese que la ausencia de una columna y el corrimiento en los nombres de algunas columnas pueden estar correlacionados. Así, por ejemplo, se tiene que en "MES" se está describiendo si en un accidente hubo heridos, daños materiales o fallecimientos, mientras que para la característica "COMUNA" en realidad se está describiendo el barrio en el que se dio el incidente, por lo que se procede a su arreglo. Con esto presente, se comienza corrigiendo los nombres de las columnas en términos de los nombres de las columnas originales.
+
+```{r Cambio de nombre a columbinas}
+accidentes <- incidentes %>%
+  rename(GRAVEDAD = MES,
+         MES = NRO_RADICADO,
+         NRO_RADICADO = NUMCOMUNA,
+         NUMCOMUNA = BARRIO,
+         BARRIO = COMUNA,
+         COMUNA = LOCATION,
+         LOCATION = X,
+         FUENTE = Y)
+```
+
+Entonces, al chequear nuevamente la base de datos, como se ve a continuación, se verifica que los nombres de las características de esta base de datos ahora tienen relación con los niveles que incluye cada una.
+
+```{r Estructura dados nuevos nombres, echo = FALSE}
+glimpse(accidentes)
+```
+
+Con esto listo, se procede a la verificación de cada una de las variables de esta base de datos para proceder con su respectiva corrección, incluyendo también una modificación en el tipo de variable que registra $\color{blue}{\textsf{R}}$ para cada variable, ya que como se observa, la mayoría de ellas son almacenadas como tipo carácter ($\texttt{chr}$), cuando debería ser realmente de tipo factor, fecha o numérico.
+
+# Revisión de las características de la base de datos
+
+## Año
+
+Esta base de datos dice tener un registro de accidentes de la ciudad de Medellín entre los años 2014 y 2020, por lo que es de esperar que los niveles de medición de esta variable sean los años que se dan dicho periodo. Y al revisar, se obtiene que los verdaderos niveles de medición para la variable ***año*** son:
+
+```{r Años de la base de datos}
+accidentes <- accidentes %>% 
+  mutate(AÑO = as.factor(AÑO))
+levels(accidentes$AÑO)
+```
+
+Y como se observa, este es el caso, ya que todos los años entre el 2014 y el 2020, incluyéndolos a ambos, son los niveles de medición para esta base de datos; no obstante, hay un inconveniente para el año **2019**, ya que además del propio nivel de medición para esa anualidad, se tiene un segundo nivel que es llamado "*2019\\r*", lo cual debe ser corregido para que haya uniformidad y unicidad en los años. De manera que, al corregir esto y chequear nuevamente los niveles de medición para esta variable, se obtiene:
+
+```{r}
+levels(accidentes$AÑO)[levels(accidentes$AÑO) == "2019\\r"] <- "2019"
+levels(accidentes$AÑO)
+```
+
+Lo cual es correcto.
+
+$ CBML
+
+Según la documentación de la base de datos, disponible en la web de MeData, la variable ***CBML*** hace referencia al código catastral de la comuna, barrio, manzana o lote catastral en la cual se dio el incidente observado. Además, considerando los objetivos de la base de datos, la información catastral no resulta relevante, por lo cual solo se va a proceder con la reforma de la tipología de esta variable, ya que se trata de una variable categórica nominal, para dejarla como una variable de tipo *factor*.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CBML = as.factor(CBML))
+```
+
+## Clase de accidente
+
+La clase de accidente es una variable categórica nominal, que incluye los siguientes niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = as.factor(CLASE_ACCIDENTE))
+levels(accidentes$CLASE_ACCIDENTE)
+```
+Y como se observa, hay varias categorías que hacen referencia a lo mismo, como lo son "*Caida de Ocupante*", "*Caída de Ocupante*", "*Caida Ocupante*" y "*Caída Ocupante*", que como se observa, se refieren a la **caída del ocupante**, lo que merece una corrección para que exista unicidad en esta característica de la base de datos. Por otro lado, existen `r sum(!complete.cases(accidentes$CLASE_ACCIDENTE))` observaciones que no incluyen ninguna descripción del tipo de accidente, por lo que serán registradas como *NA*s. 
+
+Dicho lo anterior, al realizar las correcciones correspondientes y al revisar nuevamente los niveles de medición para esta variable, se obtienen:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
+                           "Caída Ocupante" = "Caída del ocupante",
+                           "Caida de Ocupante" = "Caída del ocupante",
+                           "Caída de Ocupante" = "Caída del ocupante",
+                           "Caida Ocupante" = "Caída del ocupante"))
+levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- NA
+levels(accidentes$CLASE_ACCIDENTE)
+```
+
+Lo que es adecuado.
+
+## Dirección
+
+La dirección se refiere al domicilio catastral del predio más cercano al punto en el que se dio el incidente de tránsito, de lo cual se deduce que esta es una variable categórica nominal, pero se puede pensar inicialmente que esta variable tendrá demasiados niveles diferentes, para lo cual se va a comenzar revisando la cantidad de direcciones únicas en la base de datos para evaluar si merece la pena revisar los niveles uno a uno como se acabó de hacer con la clase de accidente.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION = as.factor(DIRECCION)) %>% 
+  mutate(DIRECCION = str_trim(DIRECCION))
+unicos_dir <- length(unique(accidentes$DIRECCION))
+```
+
+Y con ayuda de $\color{blue}{\textsf{R}}$ se verifica que existen `r unicos_dir` registros de dirección diferentes, lo cual es una cantidad elevada, por lo que se omite la evaluación de cada uno de los niveles para poder determinar la unicidad. En cambio, es adecuado chequear si existen observaciones vacías o con NAs, pero al hacer la revisión con $\color{blue}{\textsf{R}}$, se constanta que no existen este tipo de casos.
+
+```{r}
+nas_direc <- sum(is.na(accidentes$DIRECCION))
+vacio_direc <- sum(!complete.cases(accidentes$DIRECCION))
+```
+
+## Dirección encasillada
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION.ENCASILLADA = as.factor(DIRECCION.ENCASILLADA)) %>% 
+  mutate(DIRECCION.ENCASILLADA = str_trim(DIRECCION.ENCASILLADA))
+accidentes$DIRECCION.ENCASILLADA[accidentes$DIRECCION.ENCASILLADA == "0"] <- NA
+unicos_direnc <- length(unique(accidentes$DIRECCION.ENCASILLADA))
+nas_direnc <- sum(is.na(accidentes$DIRECCION.ENCASILLADA))
+vacio_direnc <- sum(accidentes$DIRECCION.ENCASILLADA == "")
+```
+
+Realizando un procedimiento análogo al de la ***dirección***, se obtiene que existen `r unicos_direnc`, lo cual nuevamente resulta en un valor bastante elevado como para revisar cada uno de los niveles por separado para asegurar la unicidad. Por otro lado, se tiene que esta base de datos cuenta con `r nas_direnc` valores registrados como *NA*s y `r vacio_direnc` direcciones encasilladas vacías.
+
+## Diseño
+
+La variable ***diseño*** se refiere al tipo de infraestructura vial que generó o en la cual se dio el incidente vial registrado, y sus niveles de medición se observan a continuación:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = as.factor(DISEÑO))
+levels(accidentes$DISEÑO)
+```
+
+Y se constanta que existen errores en la codificación de este archivo, por lo que se procede a su corrección, así como a cambio de errores ortográficos en algunos niveles, con lo que se obtienen los siguientes nuevos niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = recode(DISEÑO,
+                         "Ciclo Ruta" = "Ciclorruta",
+                         "Interseccion" = "Intersección",
+                         "Lote o Predio" = "Lote o predio",
+                         "Paso a Nivel" = "Paso a nivel",
+                         "Paso Elevado" = "Paso elevado",
+                         "Paso Inferior" = "Paso inferior",
+                         "Tramo de via" = "Tramo de vía",
+                         "Tunel" = "Túnel",
+                         "Via peatonal" = "Vía peatonal"))
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == ""] <- NA
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == "Pont\\xF3n"] <- "Pontón"
+levels(accidentes$DISEÑO)
+```
+
+Que es más adecuado.
+
+## Expediente
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(EXPEDIENTE = as.factor(EXPEDIENTE))
+unicos_exp <- length(unique(accidentes$EXPEDIENTE))
+levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- NA
+nas_exp <- sum(is.na(accidentes$EXPEDIENTE))
+vacio_exp <- sum(accidentes$EXPEDIENTE == "")
+```
+
+
+El expediente es un número que se le asigna a la ficha de registro de cada incidente vial según su orden de llegada, y considerando esta definición, es de esperar que todos los incidentes de la base de datos tengan números de expediente diferentes, en tanto corresponden a accidentes distintos, es decir, debe haber unicidad en esta variable. Sin embargo, al revisar la base de datos se obtiene que existen `r unicos_exp` expedientes únicos, lo que significa que esta variable cuenta con `r filas - unicos_exp` expedientes que se encuentran repetidos. Adicional a lo anterior, vale la pena destacar que para esta variable hay `r nas_exp` expedientes clasificados inicialmente como *NA*s y `r vacio_exp` observaciones con expediente vacío.
+
+```{r}
+repetidos_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+```
+
+Al hacer la revisión de los expedientes repetidos, se observa que algunos de ellos parecen tener el expediente duplicado debido a que no lo tienen y son inscritos en la base de datos como "*No reportados*".
+
+Adicionalmente, se verifica que todos los expedientes tienen la característica de tener como primer carácter la letra "*A*", de manera que se cambian los expedientes que no comienzan con la letra "A" como *NA*s. Ahora, se va a revisar qué sucede con los expedientes que tienen asociadas dos o más observaciones en la base de datos, dejando de lado a las observaciones con *NA*s, ya que con estas se debe realizar un procedimiento diferente.
+
+```{r}
+accidentes$EXPEDIENTE[substr(accidentes$EXPEDIENTE, 1, 1) != "A"] <- NA
+```
+
+
+``` {r}
+dobles_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+dobles_exp2 <- dobles_exp[is.na(dobles_exp$EXPEDIENTE) == FALSE, ]
+triples_exp <- dobles_exp %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 2)
+```
+
+Se observa que hay `r nrow(dobles_exp2)` casos en los que hay duplicación o triplicación de expedientes, de los cuales dos son triplicaciones (A000311508 y A000311508). Ahora bien, al revisar los registros duplicados, se observa que algunos de ellos tienen diferencias en alguna otra característica, como la ubicación o el barrio en el cual se dio el incidente, por lo cual se debe asumir que se trata de dos expedientes diferentes a pesar de tener el mismo serial, mientras que hay otros, que de hecho son la mayoría, que por sus demás características permiten deducir que se tratan del mismo incidente de tránsito, pero que tienen alguna característica como *NA* en una repetición y completa en la otra, sobre todo con el diseño de la infraestructura en la que se dio el incidente. Con esto en mente, se procede a filtrar aquellas observaciones con expediente repetido y con diseño de infraesructura desconocido para removerlas.
+
+```{r}
+dobles_exp4 <- dobles_exp2[(is.na(dobles_exp2$DISEÑO) == TRUE), ]
+dobles_exp5 <- dobles_exp4 %>% 
+  distinct(EXPEDIENTE, .keep_all = TRUE)
+```
+
+```{r}
+accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM dobles_exp5')
+```
+
+## Fecha de accidente
+
+Un asunto importante es la fecha y la hora en la que se dio el accidente. Sin embargo, como se vio al comienza esta característica es asumida por $\color{blue}{\textsf{R}}$ como carácter, lo cual debe ser modificado para que sea de tipo fecha. Además, se van a tomar cada uno de los elementos de esta: el día y la hora.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTE = as.POSIXct(FECHA_ACCIDENTE, format = "%d/%m/%Y %H:%M:%S"))
+```
+
+```{r}
+accidentes$FECHA <- as.Date(accidentes$FECHA_ACCIDENTE)
+accidentes$HORA <- format(as.POSIXct(accidentes$FECHA_ACCIDENTE),
+                          format = "%H:%M:%S")
+```
+
+## Fecha de accidentes
+
+Esta base de datos cuenta con dos registros para la fecha, siendo la segunda la asociada al registro en Informe Policial de Accidentes de Tránsito, IPAT, pero con algunos inconvenientes, ya que al revisarla, se observa que todas ellas cuentan con un par de letras en medio de la hora y el día y al final de toda la fecha, lo cual dificulta el procesamiento de la base de datos y para la cual se va a realizar un mejoramiento para que conserve el formato adecuado.
+
+```{r}
+# Eliminación de los 0z
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = substring(FECHA_ACCIDENTES, 1, nchar(FECHA_ACCIDENTES)-5))
+```
+
+```{r}
+# Cambio de las T por un espacio
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = gsub("T", " ", FECHA_ACCIDENTES))
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = as.POSIXct(FECHA_ACCIDENTES))
+```
+
+```{r}
+accidentes$HORAS <- format(as.POSIXct(accidentes$FECHA_ACCIDENTES),
+                          format = "%H:%M:%S")
+```
+
+## Gravedad
+
+La variable gravedad se refiere al saldo que deja un incidente de tránsito en términos de si esta deja heridos o muertos, por ejemplo, lo que significa que esta es una variable categórica nominal, cuyos niveles de medición son los siguientes:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD = as.factor(GRAVEDAD))
+levels(accidentes$GRAVEDAD)
+```
+Y como se observa, hay inconvenientes con una de ellas, ya que tiene errores en su codificación, lo cual obliga a que sea corregida, y al hacerlo, se obtienen los siguientes nuevos niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD = recode(GRAVEDAD,
+                           "Solo da\\xF1os" = "Solo daños"))
+levels(accidentes$GRAVEDAD)
+```
+Lo que es correcto.
+
+## Mes
+
+El mes hace referencia, como se puede pensar, el mes del año en el que se dio el accidente. Como se ve a continuación, los niveles de medición de esta variable están dados en números, considerando que el primer mes del año, enero, se cataloga como "01", toda vez que el último, diciembre, se etiqueta como "12". Ahora bien, al final se va a hacer una revisión de las fechas para separar todos los componentes del día (día, mes y año), y para evitar confusiones, se va recodificar esta variable para que tenga el nombre completo de los meses.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(MES = as.factor(MES))
+levels(accidentes$MES)
+```
+Y al realizar la recodifación de esta variable, se tiene que los nueves niveles de medición son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(MES = recode(MES,
+                      "1" = "Enero",
+                      "2" = "Febero",
+                      "3" = "Marzo",
+                      "4" = "Abril",
+                      "5" = "Mayo",
+                      "6" = "Junio",
+                      "7" = "Julio",
+                      "8" = "Agosto", 
+                      "9" = "Septiembre",
+                      "10" = "Octubre",
+                      "11" = "Noviembre",
+                      "12" = "Diciembre"))
+levels(accidentes$MES)
+```
+
+Que es lo que se deseaba.
+
+## Número de radicado
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NRO_RADICADO = as.factor(NRO_RADICADO))
+unicos_rad <- length(unique(accidentes$NRO_RADICADO))
+levels(accidentes$NRO_RADICADO)[levels(accidentes$NRO_RADICADO) == ""] <- NA
+nas_rad <- sum(is.na(accidentes$NRO_RADICADO))
+
+```
+
+
+El número de radicado, parecido al expediente, corresponde a un código asociado a la ficha del informe del incidente de tránsito, por lo que nuevamente se espera que cada incidente registrado tenga un número de radicado único. Entonces, vale la pena comenzar mencionando que hay `r nas_rad` observaciones que carecen de número de radicado y que hay `r unicos_rad` números de radicos únicos, lo que significa que existen `r nrow(accidentes) - unicos_rad - nas_rad` radicados repetidos.
+
+```{r}
+repetidos_rad <- accidentes %>% 
+  group_by(NRO_RADICADO) %>% 
+  filter(n() > 1)
+```
+
+Entonces, al filtrar la base de datos para estudiar las duplicaciones en los números de radicos, se evidencia que no existen dos observaciones exactamente iguales, sino que difieran en la fecha y el barrio, por dar un par de ejemplos, de manera que no es necesario descartar observaciones por cuenta del número de radicado.
+
+## Número de columna
+
+Para estudiar esta variable, que por su definición es de tipo categórica nominal, se va observar primero cuáles son sus niveles:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = as.factor(NUMCOMUNA))
+levels(accidentes$NUMCOMUNA)
+```
+
+Y como se observa, existen problemas de unicidad, ya que las comunas que están etiquetadas con números del uno al nueve tienen dos versiones: una de dos dígitos (como "*02*") y otra de un solo dígito (como "*2*"), por lo cual se procede a realizar la corrección. Adicionalmente, los registros que no hacen referencia a ninguna comuna en particular serán recodificadas como *NA*s. Con esto, los nuevos niveles de medición de esta variable son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = recode(NUMCOMUNA,
+                            "01" = "1",
+                            "02" = "2",
+                            "03" = "3",
+                            "04" = "4",
+                            "05" = "5",
+                            "06" = "6",
+                            "07" = "7",
+                            "08" = "8",
+                            "09" = "9"))
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "0"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "AU"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "In"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "Sin Inf"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "SN"] <- NA
+levels(accidentes$NUMCOMUNA)
+```
+
+Que es lo que se desea.
+
+## Barrio
+
+Para los barrios, se tiene que los diferentes niveles de medición son los siguientes:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(BARRIO = as.factor(BARRIO))
+
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal manera que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden al barrio *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección, lo cual lleva a la siguiente tabla:
+
+```{r}
+# Corrección de barrios con códigos
+accidentes <- accidentes %>% 
+  mutate(BARRIO = recode(BARRIO,
+                         "0103" = "Popular",                              
+                          "0105" = "Moscú No. 2",
+                          "0109" = "Aldea Pablo VI",                                          
+                          "0202" = "Playón de los Comuneros",
+                          "0205" = "La Francia",                                          
+                          "0208" = "Villa Niza",
+                          "0211" = "La Rosa",                                          
+                          "0301" = "La Salle",
+                          "0302" = "Las Granjas",                                          
+                          "0303" = "Campo Valdés No. 2",
+                          "0304" = "Santa Inés",                                          
+                          "0306" = "El Pomar",
+                          "0307" = "Manrique Central No. 2",                                         
+                          "0309" = "Versalles No. 1",
+                          "0310" = "Versalles No. 2",                                         
+                          "0312" = "Oriente",
+                          "0402" = "San Isidro",                                         
+                          "0408" = "San Pedro",
+                          "0409" = "Manrique Central No. 1",                                         
+                          "0413" = "Aranjuez",
+                          "0505" = "Boyacá",                                         
+                          "0509" = "Girardot",
+                          "0514" = "Alfonso López",                                        
+                          "0606" = "San Martín de Porres",
+                          "0711" = "El Diamante",                                         
+                          "0712" = "Aures No. 2",
+                          "0716" = "Palenque",                                          
+                          "0717" = "Robledo",
+                          "0803" = "San Miguel",                                         
+                          "0809" = "Sucre",
+                          "0811" = "Trece de Noviembre",                                          
+                          "0813" = "Villatina",
+                          "0815" = "Las Estancias",                                         
+                          "0819" = "Villa Liliam",
+                          "0903" = "Bomboná No. 2",                                         
+                          "0906" = "Barrio Caicedo",
+                          "0907" = "Buenos Aires",                                          
+                          "0912" = "El Salvador",
+                          "0914" = "Asomadera No. 1",                                         
+                          "1001" = "Prado",
+                          "1003" = "Jesús Nazareno",                                         
+                          "1004" = "El Chagualo",
+                          "1007" = "Guayaquil",                                         
+                          "1008" = "Corazón de Jesús",
+                          "1011" = "Calle Nueva",                                         
+                          "1012" = "Perpetuo Socorro",
+                          "1015" = "Bomboná No. 1",                                         
+                          "1018" = "Villa Nueva",
+                          "1019" = "La Candelaria",                                         
+                          "1020" = "San Diego",
+                          "1101" = "Carlos E. Restrepo",                                          
+                          "1102" = "Suramericana",
+                          "1103" = "Naranjal",                                         
+                          "1105" = "Los Conquistadores",
+                          "1108" = "Laureles",                                          
+                          "1114" = "Los Colores",
+                          "1202" = "Calasanz",                                          
+                          "1204" = "La América",
+                          "1205" = "La Floresta",                                         
+                          "1206" = "Santa Lucía",
+                          "1211" = "Simón Bolívar",                                         
+                          "1306" = "La Pradera",
+                          "1408" = "Altos del Poblado",                                         
+                          "1419" = "Manila",
+                          "1422" = "La Aguacatala",                                         
+                          "1423" = "Santa María de los Ángeles",
+                          "1503" = "Trinidad",                                         
+                          "1504" = "Santa Fe",
+                          "1507" = "Campo Amor",                                         
+                          "1510" = "Guayabal",
+                          "1511" = "La Colina",                                         
+                          "1603" = "Belén",
+                          "1605" = "San Bernardo",                                         
+                          "1611" = "Loma de los Bernal",
+                          "1612" = "La Gloria",                                         
+                          "1613" = "Altavista",
+                          "1620" = "El Nogal - Los Almendros",                                         
+                          "5002" = "La Frisola",
+                          "6001" = "La Loma",                                         
+                          "7001" = "Altavista Sector Central",
+                          "7002" = "Aguas Frías",                                         
+                          "9004" = "Santa Elena",
+                          "9086" = "Suburbano El Plan"))
+```
+
+```{r}
+# Corrección de barrios con problemas de codificación o unicidad
+accidentes <- accidentes %>% 
+  mutate(BARRIO = recode(BARRIO,
+                         "\\xC1rea de Expansi\\xF3n Altos de Calasanz" = "Área de expansión Altos de Calasanz",
+                         "\\xC1rea de Expansi\\xF3n Pajarito" = "Área de expansión Pajarito",
+                         "\\xC1rea de Expansi\\xF3n San Antonio de Prado" = "Área de expansión San Antonio de Prado",
+                          "Alejandr\\xEDa" = "Alejandría",
+                          "Alejandro Echavarr\\xEDa" = "Alejandro Echavarría",
+                          "Alfonso L\\xF3pez" = "Alfonso López",
+                          "Andaluc\\xEDa" = "Andalucía",
+                          "Antonio Nari\\xF1o" = "Antonio Nariño",
+                          "Area De Expansion Altavista" = "Área de expansión Altavista",
+                          "Área de Expansión Altavista" = "Área de expansión Altavista",                
+                          "Area de Expansion Altos de Calasanz" = "Área de expansión Altos de Calasanz",
+                          "Área de Expansión Altos de Calasanz" = "Área de expansión Altos de Calasanz",       
+                          "Area De Expansion Belen Rincon" = "Área de expansión Belén Rincón",
+                          "Área de Expansión Pajarito" = "Área de expansión Pajarito",              
+                          "Área de Expansión San Antonio de Prado" = "Área de expansión San Antonio de Prado",                              
+                          "Asomadera No.1" = "Asomadera No. 1",
+                          "Aguas frias" = "Aguas frías",
+                          "Aures No.1" = "Aures No. 1",
+                          "Aures No.2" = "Aures No. 2",                                 
+                          "B. Cerro  El Volador" = "Barrio Cerro El Volador",                          
+                          "B. Cerro El Volador" = "Barrio Cerro El Volador",
+                          "Barrio Col\\xF3n" = "Barrio Colón",                                                              
+                          "Barrio Crist\\xF3bal" = "Barrio Cristóbal",                           
+                          "Barrio de Jes\\xFAs" = "Barrio de Jesús",                               
+                          "Barrios de Jesús" = "Barrio de Jesús",
+                          "Batall\\xF3n Girardot" = "Batallón Girardot",                        
+                          "Bel\\xE9n" = "Belén",                                    
+                          "Belalc\\xE1zar" = "Belalcázar",                         
+                          "Berl\\xEDn" = "Berlín",
+                          "Berlin" = "Berlín",                                        
+                          "Bermejal-Los Alamos" = "Bermejal - Los Álamos",                                                              
+                          "Bombon\\xE1 No. 1" = "Bomboná No. 1",                             
+                          "Bombon\\xE1 No. 2" = "Bomboná No. 2",
+                          "Bombon\\xE1 No.1" = "Bomboná No. 1",                             
+                          "Bomboná No.1" = "Bomboná No. 1",
+                          "Boqueron" = "Boquerón",                
+                          "Boyac\\xE1" = "Boyacá",                                     
+                          "C\\xF3rdoba" = "Córdoba",                                  
+                          "Cabecera Urbana San Cristobal" = "Cabecera Urbana San Cristóbal",                                  
+                          "Campo Vald\\xE9s No. 1" = "Campo Valdés No. 1",
+                          "Campo Vald\\xE9s No. 2" = "Campo Valdés No. 2",                       
+                          "Campo Vald\\xE9s No.2" = "Campo Valdés No. 2",                            
+                          "Campo Valdés No.2" = "Campo Valdés No. 2",                                                                              
+                          "Catalu\\xF1a" = "Cataluña",                                                                                           
+                          "Coraz\\xF3n de Jes\\xFAs" = "Corazón de Jesús",
+                          "Diego Echavarr\\xEDa" = "Diego Echavarría",                         
+                          "Doce de Octubre No.1" = "Doce de Octubre No. 1",                     
+                          "Doce de Octubre No.2" = "Doce de Octubre No. 2",                                  
+                          "El Coraz\\xF3n" = "El Corazón",                                
+                          "El Corazon El Morro" = "El Corazón - El Morro",                                                           
+                          "El Nogal-Los Almendros" = "El Nogal - Los Almendros",                                    
+                          "El Progreso No.2" = "El Progreso No. 2",                       
+                          "El Rinc\\xF3n" = "El Rincón",                                
+                          "El Vel\\xF3dromo" = "El Velódromo",                             
+                          "Estaci\\xF3n Villa" = "Estación Villa",                         
+                          "F\\xE1tima" = "Fátima",                              
+                          "Facultad de Minas U. Nacional" = "Facultad de Minas U. Nacional",
+                          "H\\xE9ctor Abad G\\xF3mez" = "Héctor Abad Gómez",                    
+                          "Hospital San Vicente de Pa\\xFAl" = "Hospital San Vicente de Paúl",             
+                          "Jard\\xEDn Bot\\xE1nico" = "Jardín Botánico",                              
+                          "Jes\\xFAs Nazareno" = "Jesús Nazareno",                                 
+                          "La Am\\xE9rica" = "La América",
+                          "La Mansi\\xF3n" = "La Mansión",
+                          "La mota" = "La Mota",                                      
+                          "La Pi\\xF1uela" = "La Piñuela",                              
+                          "Las Lomas No.1" = "Las Lomas No. 1",                             
+                          "Las Lomas No.2" = "Las Lomas No. 2",
+                          "Los \\xC1ngeles" = "Los Ángeles",                          
+                          "Los Alc\\xE1zares" = "Los Alcázares",
+                          "Los Balsos No.1" = "Los Balsos No. 1",
+                          "Los Balsos No.2" = "Los Balsos No. 2",                          
+                          "Manrique Central No.1" = "Manrique Central No. 1",
+                          "Manrique Central No.2" = "Manrique Central No. 2",                       
+                          "Mar\\xEDa Cano Carambolas" = "María Cano Carambolas",                    
+                          "Mosc\\xFA No. 1" = "Moscú No. 1",                               
+                          "Mosc\\xFA No. 2" = "Moscú No. 2",
+                          "Mosc\\xFA No.2" = "Moscú No. 2",                              
+                          "Moscú No.1" = "Moscú No. 1",                                   
+                          "Moscú No.2" = "Moscú No. 2",
+                          "Nueva Villa de Aburr\\xE1" = "Nueva Villa de Aburrá",                   
+                          "Nueva Villa de la Iguan\\xE1" = "Nueva Villa de la Iguaná",                 
+                          "Nueva Villa de La Iguaná" = "Nueva Villa de la Iguaná",                     
+                          "Play\\xF3n de Los Comuneros" = "Playón de los Comuneros",                  
+                          "San Germ\\xE1n" = "San Germán",                              
+                          "San Javier No.1" = "San Javier No. 1",                            
+                          "San Javier No.2" = "San Javier No. 2",
+                          "San Joaqu\\xEDn" = "San Joaquín",                              
+                          "San Jos\\xE9 de la Monta\\xF1a" = "San José de la Montaña",              
+                          "San Jos\\xE9 la Cima No. 1" = "San José de la Cima No. 1",
+                          "San Jos\\xE9 la Cima No.2" = "San José de la Cima No. 2",                     
+                          "San Jose Del Manzanillo" = "San José del Manzanillo",                     
+                          "San José la Cima No. 1" = "San José de la Cima No. 1",
+                          "San José la Cima No.2" = "San José de la Cima No. 2",                       
+                          "San Mart\\xEDn de Porres" = "San Martín de Porres",                     
+                          "Santa F\\xE9" = "Santa Fe",                                
+                          "Santa Fé" = "Santa Fe",
+                          "Santa In\\xE9s" = "Santa Inés",                              
+                          "Santa Luc\\xEDa" = "Santa Lucía",
+                          "Santa M\\xF3nica" = "Santa Mónica",                              
+                          "Santa Mar\\xEDa de los \\xC1ngeles" = "Santa María de los Ángeles",
+                          "Santa Mar\\xEDa de Los \\xC1ngeles" = "Santa María de los Ángeles",           
+                          "Santa María de Los Ángeles" = "Santa María de los Ángeles",                    
+                          "Santo Domingo Savio No.1" = "Santo Domingo Savio No. 1",                                       
+                          "Sim\\xF3n Bol\\xEDvar" = "Simón Bólivar",
+                          "SUBURB El Plan" = "Suburbano El Plan",                                
+                          "Suburbano el Tesoro" = "Suburbano El Tesoro",                           
+                          "Suburbano La Palma-El Patio" = "Suburbano La Palma - El Patio",
+                          "Suburbano Pedregal alto" = "Suburbano Pedregal Alto",
+                          "U.D. Atanasio Girardot" = "Unidad Deportiva Atanasio Girardot",
+                          "Versalles No.1" = "Versalles No. 1",                              
+                          "Versalles No.2" = "Versalles No. 2",
+                          "L\\xF3pez de Mesa" = "López de Mesa",
+                          "La Loma De Los Bernal" = "Loma de los Bernal"))
+```
+
+```{r}
+# NA para barrios sin información
+
+accidentes$BARRIO[accidentes$BARRIO == "Sin Inf"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Sin Nombre"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == ""] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Inst"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "0"] <- NA
+```
+
+```{r}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+## Comuna
+
+La comuna describe el nombre completo de la comuna en la que se dio el incidente vial observado, por lo que se puede concluir que es una variable categórica nominal, cuyos niveles de medición son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(COMUNA = as.factor(COMUNA))
+levels(accidentes$COMUNA)
+```
+
+Y como se observa, existen varios problemas de unicidad o de codificación, los cuales van a ser corregidos. Además, los accidentes de tránsito que carecen de registro asociado a la comuna serán codificados como *NA*s. Con esto en mente, se van a revisar nuevamente los niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(COMUNA = recode(COMUNA,
+                         "Bel\\xE9n" = "Belén",
+                         "Corregimiento de San Crist\\xF3bal" = "Corregimiento de San Cristóbal",
+                         "Corregimiento de San Sebasti\\xE1n de Palmitas" = "Corregimiento de San Sebastián de Palmitas",
+                         "La Am\\xE9rica" = "La América"))
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "SN"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "Sin Inf"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "In"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "0"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "AU"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == ""] <- NA
+levels(accidentes$COMUNA)
+```
+
+Y como se observa, es adecuado.
+
+## Ubicaciones geográficas
+
+El caso de las ubicaciones geográficas es especial porque, de acuerdo con la documentación de esta base de datos, las coordenadas de longitud y latitud del accidente registrado se encuentran separadas en dos variables distintas: X y Y, sin embargo, en la base de datos que realmente se obtiene, estas dos están fusionadas en una sola, lo cual probablemente es lo que dio lugar al desfase en los nombres de las columnas, por lo cual, se procede a su separación.
+
+```{r}
+accidentes[c("X", "Y")] <- str_split_fixed(accidentes$LOCATION, ", ", 2)
+```
+
+```{r}
+options(digits = 10)
+accidentes <- accidentes %>% 
+  mutate(X = substring(X, 2)) %>% 
+  mutate(Y = substring(Y, 1, nchar(Y) - 1)) %>% 
+  mutate(X = as.numeric(X)) %>% 
+  mutate(Y = as.numeric(Y))
+```

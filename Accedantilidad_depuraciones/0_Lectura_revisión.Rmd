@@ -325,6 +325,6 @@ accidentes <- accidentes %>%
 
 ```{r}
 save(accidentes, file="incidentes.RData")
-rm(list = ls())
+#rm(list = ls())
 ```
 

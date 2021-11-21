@@ -17,18 +17,17 @@ library("htmlTable")
 
 ```{r Base de datos, include = FALSE, warning = FALSE}
 load("incidentes.RData")
-incidentes <- accidentes
 ```
 
 
 # El problema de los barrios en la base de datos
 
-| En la base de datos de accidentalidad de Medellín entre los años 2014 y 2020, proporcionada por la Secretaría de Tránsito de dicho municipio, se tiene que una de las variables más importantes es la relacionada con el barrio, ya que esta información espacial permite ubicar en un mapa una ubicación de forma orientativa de los incidentes viales que han sucedido. Sin embargo, esto es inicialmente problemático debido a que para esta característica se presentan diversos problemas.
+| En la base de datos de accidentalidad de Medellín entre los años 2014 y 2020, proporcionada por la Secretaría de Tránsito de dicho municipio, se tiene que una de las variables más importantes es la relacionada con el barrio, ya que esta información espacial permite ubicar en un mapa una ubicación de forma orientativa de los accidentes viales que han sucedido. Sin embargo, esto es inicialmente problemático debido a que para esta característica se presentan diversos problemas.
 
 | El primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal manera que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden al barrio *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes.
 
 ```{r Presentación de barrios}
-barriosAux <- incidentes %>% # Vector con todos los barrios de la BD
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
   select(c(BARRIO))
 # barrios <- as.data.frame(barriosAux[!duplicated(barriosAux), ])
 barrios <- barriosAux %>% 
@@ -54,7 +53,7 @@ datatable(barrios,
 ```
 
 ```{r Corrección de códigos}
-incidentes <- incidentes %>% 
+accidentes <- accidentes %>% 
   mutate(BARRIO = recode(BARRIO,
                          "0103" = "Popular",                              
                           "0105" = "Moscú No. 2",
@@ -142,7 +141,7 @@ incidentes <- incidentes %>%
 ```
 
 ```{r}
-incidentes <- incidentes %>% 
+accidentes <- accidentes %>% 
   mutate(BARRIO = recode(BARRIO,
                          "\\xC1rea de Expansi\\xF3n Altos de Calasanz" = "Área de expansión Altos de Calasanz",
                          "\\xC1rea de Expansi\\xF3n Pajarito" = "Área de expansión Pajarito",
@@ -260,17 +259,17 @@ incidentes <- incidentes %>%
 ```
 
 ```{r}
-incidentes$BARRIO[incidentes$BARRIO == "Sin Inf"] <- NA
-incidentes$BARRIO[incidentes$BARRIO == "Sin Nombre"] <- NA
-incidentes$BARRIO[incidentes$BARRIO == ""] <- NA
-incidentes$BARRIO[incidentes$BARRIO == "Inst"] <- NA
-incidentes$BARRIO[incidentes$BARRIO == "0"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Sin Inf"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Sin Nombre"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == ""] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Inst"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "0"] <- NA
 ```
 
 Y al hacer las correcciones de codificación, ortográficas y de forma de categorizar los barrios, la tabla de barrios cambia y termina siendo como sigue:
 
 ```{r}
-barriosAux <- incidentes %>% # Vector con todos los barrios de la BD
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
   select(c(BARRIO))
 barrios <- barriosAux %>% 
   group_by(BARRIO) %>% 
@@ -281,4 +280,13 @@ datatable(barrios,
                        "Nombre del barrio",
                        "Frecuencia absoluta"))
 ```
+```{r}
+Esp <- accidentes %>% 
+  filter(BARRIO == "La Esperanza" | BARRIO == "La Esperanza No. 2")
+```
 
+
+
+```{r}
+save(accidentes, file="incidentes.RData")
+```
