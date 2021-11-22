@@ -675,3 +675,50 @@ accidentes <- accidentes %>%
   mutate(X = as.numeric(X)) %>% 
   mutate(Y = as.numeric(Y))
 ```
+
+```{r}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO,COMUNA))
+barrios <- barriosAux %>% 
+  group_by(BARRIO,COMUNA) %>% 
+  summarise(Frecuencia = n())
+barrios_comuna <- barrios[!is.na(barrios$BARRIO) & !is.na(barrios$COMUNA),]
+barrios_comuna <- barrios_comuna %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO,COMUNA))
+
+barrios_comuna
+```
+```{r}
+train <- accidentes[accidentes$BARRIO %in% barrios_comuna$BARRIO,]
+test <- accidentes[!(accidentes$BARRIO %in% barrios_comuna$BARRIO),]
+```
+
+```{r}
+get_Barrio <- function(X_0, Y_0, n){
+  k <- round(sqrt(n))
+
+  dist <- sqrt((train$Y - Y_0)^2 + (train$X - X_0)^2)   # Calcula distancia euclideana
+  barrios_cerc <- train[order(dist)[1:k],]$BARRIO       # Obtiene lista de los barrios de los k puntos más cercanos
+  
+  return(barrios_cerc[which.max(table(barrios_cerc))])          # Obtiene el valor más frecuente de barrio en elos puntos cercanos
+}
+
+get_Barrio <- Vectorize(get_Barrio)
+```
+```{r}
+test$BARRIO <- get_Barrio(test$X, test$Y,20233) 
+```
+
+```{r}
+accidentes[!(accidentes$BARRIO %in% barrios_comuna$BARRIO),]$BARRIO <- test$BARRIO
+```
+
+```{r}
+accidentes[is.na(accidentes$BARRIO),]
+```
+
+```{r}
+accidentes[is.na(accidentes$BARRIO),]
+```
+
+
