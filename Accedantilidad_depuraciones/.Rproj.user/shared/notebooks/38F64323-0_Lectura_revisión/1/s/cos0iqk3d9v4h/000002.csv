@@ -1,3 +1,0 @@
-"0","accidentes <- accidentes %>% "
-"0","  mutate(DIRECCION.ENCASILLADA = str_trim(DIRECCION.ENCASILLADA))"
-"0","unicos_dir.enc <- length(unique(accidentes$DIRECCION.ENCASILLADA))"

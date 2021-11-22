@@ -1,6 +1,0 @@
-"0","options(digits = 10)"
-"0","accidentes <- accidentes %>% "
-"0","  mutate(X = substring(X, 2)) %>% "
-"0","  mutate(Y = substring(Y, 1, nchar(Y) - 1)) %>% "
-"0","  mutate(X = as.numeric(X)) %>% "
-"0","  mutate(Y = as.numeric(Y))"

@@ -1,7 +1,0 @@
-"0","dobles_exp <- accidentes %>% "
-"0","  group_by(EXPEDIENTE) %>% "
-"0","  filter(n() > 1)"
-"0","dobles_exp2 <- dobles_exp[!(dobles_exp$EXPEDIENTE == ""No reportado""), ]"
-"0","triples_exp <- dobles_exp %>% "
-"0","  group_by(EXPEDIENTE) %>% "
-"0","  filter(n() > 2)"

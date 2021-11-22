@@ -1,2 +1,0 @@
-"0","accidentes <- accidentes %>% "
-"0","  mutate(FECHA_ACCIDENTES = as.POSIXct(FECHA_ACCIDENTES))"

@@ -1,2 +1,0 @@
-"0","library(""sqldf"")"
-"0","removibles <- sqldf('SELECT * FROM dobles_exp2 EXCEPT SELECT * FROM dobles_exp5')"

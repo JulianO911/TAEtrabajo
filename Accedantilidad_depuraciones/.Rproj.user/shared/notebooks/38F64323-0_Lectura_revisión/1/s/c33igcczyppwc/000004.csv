@@ -1,1 +1,0 @@
-"0","accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM removibles')"

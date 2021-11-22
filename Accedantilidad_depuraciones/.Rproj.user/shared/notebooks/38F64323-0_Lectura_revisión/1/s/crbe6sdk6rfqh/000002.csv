@@ -1,2 +1,0 @@
-"0","accidentes <- accidentes %>% "
-"0","  mutate(NRO_RADICADO = format(NRO_RADICADO, scientific = F))"

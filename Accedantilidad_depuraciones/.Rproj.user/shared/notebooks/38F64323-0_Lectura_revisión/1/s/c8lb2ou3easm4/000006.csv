@@ -1,3 +1,0 @@
-"0","# Eliminación de los 0z"
-"0","accidentes <- accidentes %>% "
-"0","  mutate(FECHA_ACCIDENTES = substring(FECHA_ACCIDENTES, 1, nchar(FECHA_ACCIDENTES)-5))"

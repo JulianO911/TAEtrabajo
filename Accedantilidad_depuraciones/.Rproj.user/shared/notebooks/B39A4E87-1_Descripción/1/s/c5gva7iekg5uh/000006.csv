@@ -1,3 +1,0 @@
-"0","g1 <-ggplot(data = accidentes) +"
-"0","        geom_bar(mapping = aes(x = AÑO))"
-"0","ggplotly(g1)"
