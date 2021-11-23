@@ -19,28 +19,14 @@ bla bla bla
 library("caret")
 library("DT")
 library("tidyverse")
+library
 ```
 
 
 ```{r}
-load("accidentes.RData")
+accidentes = read.csv2("accidentesConBarrio", header = TRUE, sep = ";", dec = ".", encoding = "UTF-8")
+accidentes
 ```
 
-```{r}
-accidentesBarrios <- accidentes[is.na(accidentes$BARRIO) == FALSE, ]
-```
 
-```{r}
-set.seed(20211122)
-indxTrain <- createDataPartition(y = accidentesBarrios$BARRIO,
-                                 p = 0.70,
-                                 list = FALSE)
-training <- accidentesBarrios[indxTrain,]
-testing <- accidentesBarrios[-indxTrain,]
-```
-
-```{r}
-table(training$BARRIOS) / nrow(training)
-table(testing$BARRIOS) / nrow(training)
-```
 
