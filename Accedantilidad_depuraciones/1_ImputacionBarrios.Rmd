@@ -15,17 +15,37 @@ knitr::opts_chunk$set(echo = TRUE)
 
 bla bla bla
 
-```{r}
+```{r include=FALSE}
 library("caret")
 library("DT")
 library("tidyverse")
-library
 ```
 
 
 ```{r}
-accidentes = read.csv2("accidentesConBarrio", header = TRUE, sep = ";", dec = ".", encoding = "UTF-8")
+accidentes = read.csv2("accidentesConBarrio2.csv", header = TRUE, sep = ",", dec = ".", encoding = "UTF-8")
 accidentes
+```
+
+
+```{r}
+accidentes[is.na(accidentes$BARRIO),]
+```
+```{r}
+accidentes <- accidentes %>% 
+  mutate(BARRIO = as.factor(BARRIO))
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
 ```
 
 
