@@ -261,7 +261,7 @@ accidentes <- accidentes %>%
                       ifelse(BARRIO %in% com70, "Altavista",
                       ifelse(BARRIO %in% com80, "San Antonio de Prado",
                       ifelse(BARRIO %in% com90, "Santa Elena",
-                             "x"))))))))))))))))))))))
+                             "NA"))))))))))))))))))))))
 ```
 
 ```{r}

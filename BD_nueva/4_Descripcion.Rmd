@@ -45,6 +45,7 @@ library("summarytools")
 library("DT")
 library("iClick")
 library("lubridate")
+library("formattable")
 ```
 
 ```{r Lectura de la base de datos}
@@ -59,25 +60,32 @@ glimpse(accidentes)
 
 La base de datos de accidentalidad de Medellín recoge todos los accidentes que sucedieron en la ciudad de Medellín, Antioquia (Colombia) entre el lunes 14 de julio de 2014 y el lunes 31 de agosto de 2020, recogiendo algunos aspectos de cada uno de estos incidentes viales como la clase de accidente observado, la dirección en la que ocurrió, el código del expediente y su número de radicado, la fecha y hora y la ubicación en coordenadas geográficas. En general, las variables a considerar por esta base de datos son las siguientes:
 
-- *Año.* Año en el que sucedió el incidente.
-- *CBML.*	Código catastral que corresponde al código, comuna, barrio, manzana, lote catastral de un predio.
-- *Clase de accidente.* Clasificación del IPAT sobre la clase de accidente de transito: choque, atropello, volcamiento, caida de ocupante, incendio, u otro (que no corresponde a las anteriores 5 clasificaciones, p. ej: sumersión).
-- *Dirección.* Dirección donde ocurrió el incidente.
-- *Dirección encasillada.*	Dirección encasillada que entrega el geocodificador.
-- *Diseño.* Sitio de la vía donde ocurrió el accidente: ciclorruta, glorieta, intersección, lote o predio, paso a nivel, paso elevado, paso inferior, pontón, puente, tramo de vía, Túnel, vía peatonal.
-- *Expediente.*	Consecutivo que asigna UNE, según el orden de llegada de los expedientes para su diligenciamiento.
-- *Fecha del accidente.* Fecha del accidente, proviene del IPAT - Informe Policial de Accidente de Tránsito.
-- *Fecha de accidentes.* Fecha de los accidente (formato YYYY-MM-DD hh:mi:ss), proviene del IPAT - Informe Policial de accidentes de Tránsito.
-- *Gravedad del accidente.* Clasificación del IPAT - Informe Policial de Accidentes de Tránsito, sobre la gravedad del accidente, corresponde al resultado más grave presentado en el accidente. Daños materiales:  solo daños; accidente con heridos: herido; accidente con muertos: muerto. No indica cantidad.
-- *Mes.* Mes de ocurrencia del incidente vial.
-- *Número de radicado.* Consecutivo que asigna UNE según el orden de llegada de los expedientes para su diligenciamiento.
-- *Número de la comuna.* Número de la comuna en la que ocurrió incidente vial.
-- *Barrio.* Barrio de ocurrencia del incidente vial.
-- *Comuna.* Denominación con la cual se identifica cada comuna o corregimiento. 1:Popular, 2:Santa Cruz, 3: Manrique, 4: Aranjuez, 5: Castilla, 6: Doce de Octubre, 7: Robledo, 8: Villa Hermosa, 9: Buenos Aires, 10: La Candelaria, 11: Laureles - Estadio, 12: La América, 13: San Javier, 14: El Poblado, 15: Guayabal 16: Belén, 50: San Sebastián de Palmitas, 60: San Cristóbal, 70: Altavista, 80: San Antonio de Prado, 90: Santa Elena, 99: Toda la ciudad.
-- *X.* Coordenada X en metros del accidente, en sistema de coordenadas MAGNA Medellín local.
-- *Y.* Coordenada Y en metros del accidente, en sistema de coordenadas MAGNA Medellín Local.
-
-Además, para facilidad con el manejo de las fechas, se separó la fecha de la hora de los accidentes en la base de datos de trabajo.
+- **Fecha del accidente.** Fecha en la que sucedió el incidente de tránsito según el Informe Policial de Accidentes de Tránsito, IPAT, en el formato YYYY-MM-DD HH:MM:SS.
+- **Año.** Año en el que se dio el accidente según el reporte oficial del IPAT.
+- **Mes.** Mes en el que se dio el accidente según el reporte oficial del IPAT descrito en palabras (ej. *enero*)
+- **Fecha.** Extracción del día, mes y año en el que se dio el incidente de tránsito según el IPAT extraído de la ***fecha del accidente*** en formato YYYY-MM-DD.
+- **Hora.** Extracción de la hora y el minuto en el que se dio el incidente de tránsito según el IPAT extraído de la ***fecha del accidente*** en formato HH:MM:SS.
+- **Clase de accidente.** Clasificación del IPAT sobre la clase de accidente de transito: choque, atropello, volcamiento, caida de ocupante, incendio, u otro (que no corresponde a las anteriores 5 clasificaciones, p. ej: sumersión).
+- **Diseño.** Sitio de la vía donde ocurrió el accidente: ciclorruta, glorieta, intersección, lote o predio, paso a nivel, paso elevado, paso inferior, pontón, puente, tramo de vía, túnel, vía peatonal.
+- **Gravedad del accidente.** Clasificación del IPAT sobre la gravedad del accidente, que corresponde al resultado más grave presentado en el accidente. Daños materiales: solo daños; accidente con heridos: hubo heridos como resultado del incidente; accidente con muertos: al menos una persona falleció como consecuencia del incidente de tránsito. No indica cantidad.
+- **Barrio.** Nombre del barrio o zona en la que sucedió el accidente de tránsito.
+- **Comuna** Comuna o corregimiento de Medellín a la que pertenece el barrio o zona en la que se ocurrió el accidente de tránsito observado conforme al registro en el IPAT.
+- **X, magna.** Coordenadas horizontales del punto en el que sucedió el accidente de tránsito registrado con origen en el sistema de coordenadas geográficas Magna - Medellín.
+- **Y, magna.** Coordenadas verticales del punto en el que sucedió el accidente de tránsito registrado con origen en el sistema de coordenadas geográficas Magna - Medellín.
+- **Longitud.** Coomponente de la longitud de las coordenadas geográficas del punto en el que se dio el accidente de tránsito registrado.
+- **Latitud.** Coomponente de la latitud de las coordenadas geográficas del punto en el que se dio el accidente de tránsito registrado.
+- **Comuna modificada.** Verificación de la comuna a la que pertenece un barrio o zona según los mapas oficiales de la Alcaldía de Medellín.
+- **Día modificado.** Componente del día de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Mes modificado.** Componente del mes de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Año modificado.** Componente del año de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Semana modificada uno.** Número de la semana en el año en la que se dio un accidente de tránsito observado, teniendo en cuenta que la primera semana va del primero a siete de enero, la segunda va del ocho al catorce de enero y así sucesivamente sin considerar el día de la semana asociada a cada día.
+- **Semana modificada dos.** Número de la semana del año en la que se dio un accidente de tránsito observado considerando el día en el que comienza el año. Así, si un año comienza el día sabado, entonces el primero y el segundo de enero son la primera semana, pero el tres de enero, siendo lunes, registra una nueva semana, que en este caso es la segunda, y así sucesivamente.
+- **Día semana.** Nombre del día de la semana en la que se dio un accidente de tránsito observado.
+- **Mes semana.** Mes en el que se dio un accidente de tránsito según la fecha formalmente registrada en el IPAT.
+- **Festivo.** Identificación de días asociados a festivos.
+- **Flores.** Identificación de días asociados a la celebración de la Feria de las Flores en la ciudad.
+- **Fútbol.** Identificación de días en los que algún equipo local de fútbol participó en una final de fútbol de la categoría primera del país.
+- **Quincena.** Identificación de días en los que las empresas y las instituciones públicas y privadas pagan a sus empleados formalos sus quincenas.
 
 # Descripción general
 
@@ -86,15 +94,34 @@ A continuación se puede observar una descripción general de las variables más
 ```{r Resumen de todas las variables}
 print(dfSummary(accidentes), method = "render")
 ```
+
 # Año
 
 A continuación se observa una tabla de frecuencias para los años de los incidentes registrados en la base de datos de incidentes.
 
 ```{r Tabla de frecuencias para el año}
-datatable(freq(accidentes$AÑO))
+customGreen = "#DeF7E9"
+
+frecano <- as.data.frame(freq(accidentes$AÑO))
+
+frecano <- frecano %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabano <- formattable(frecano, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+ano <- round(tabano, 2)
+ano
 ```
 
-Como se observa, los años 2015 a 2019 tienen aproximadamente la misma cantidad de observaciones en cada uno de ellos, lo cual es de esperar porque para todos ellos se cubre la totalidad del año, mientras que para los años 2014 y 2020 solo se cubre una parte de ellos. En todo caso, es interesante observar que el año en el que más accidentes se observaron fue el 2016, con 46,989 incidentes en total, lo cual representa el 17.38 % del total de observaciones. Gráficamente, se puede visualizar mediante el siguiente gráfico de barras:
+Como se observa, los años 2015 a 2019 tienen aproximadamente la misma cantidad de observaciones en cada uno de ellos, lo cual es de esperar porque para todos ellos se cubre la totalidad del año, mientras que para los años 2014 y 2020 solo se cubre una parte de ellos. En todo caso, es interesante observar que el año en el que más accidentes se observaron fue el 2016, con 46,991 incidentes en total, lo cual representa el 17.38 % del total de observaciones. Gráficamente, se puede visualizar mediante el siguiente gráfico de barras:
 
 ```{r Gráfico de barras para el año}
 g1 <-ggplot(data = accidentes) +
@@ -121,10 +148,28 @@ La clase de accidente es una variable categórica de orden nominal que define de
 Teniendo esto presente, se puede definir la siguiente tabla de frecuencias para esta base de datos:
 
 ```{r Tabla de frecuencias para la clase de accidentes}
-datatable(freq(accidentes$CLASE_ACCIDENTE))
+customGreen = "#DeF7E9"
+
+frecclase <- as.data.frame(freq(accidentes$CLASE_ACCIDENTE))
+
+frecclase <- frecclase %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tablaclase <- formattable(frecclase, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+clase <- round(tablaclase, 2)
+clase
 ```
 
-De la tabla anterior se puede observar que el tipo de accidente más frecuente es el choque, pues se observaron un total de 180,410 incidentes de tráfico que involucraron a este tipo de colisiones, lo que representa al 66.74 %  de los accidentes, lo cual es llamativo porque resulta más de dos terceras partes de todos los incidentes ocurridos en la ciudad de Medellín entre el año 2014 y 2020. A continuación se tienen a los incidentes que no clasifican en ninguna de las categorías propuestas por Informe Policial de Accidentes de Tránsito, IPAT, es decir, los que se etiquetan como "***otro***", dado que el 11,11 % de los incidentes registrados clasifican en esta categoría. En tercer lugar se tiene a los atropellamientos que abarcan al 9.36 % de los accidentes de tránsito observados en Medellín en el periodo mencionado. Por último, vale destacar que el tipo de incidente menos frecuente de todos es el que involucra a incendios, ya que durante este periodo solo sucedieron 35 eventos de este tipo, lo cual se evidencia en el siguiente gráfico de barras, pues la barra asociada a este tipo de incidente ni siquiera es apreciable, toda vez que las colisiones opacan al resto por su alta frecuencia relativa.
+De la tabla anterior se puede observar que el tipo de accidente más frecuente es el choque, pues se observaron un total de 180,431 incidentes de tráfico que involucraron a este tipo de colisiones, lo que representa al 66.75 %  de los accidentes, lo cual es llamativo porque resulta más de dos terceras partes de todos los incidentes ocurridos en la ciudad de Medellín entre el año 2014 y 2020. A continuación se tienen a los incidentes que no clasifican en ninguna de las categorías propuestas por Informe Policial de Accidentes de Tránsito, IPAT, es decir, los que se etiquetan como "***otro***", dado que el 11,11 % de los incidentes registrados clasifican en esta categoría. En tercer lugar se tiene a los atropellamientos que abarcan al 9.36 % de los accidentes de tránsito observados en Medellín en el periodo mencionado. Por último, vale destacar que el tipo de incidente menos frecuente de todos es el que involucra a incendios, ya que durante este periodo solo sucedieron 35 eventos de este tipo, lo cual se evidencia en el siguiente gráfico de barras, pues la barra asociada a este tipo de incidente ni siquiera es apreciable, toda vez que las colisiones opacan al resto por su alta frecuencia relativa.
 
 ```{r Gráfico de barras para la clase de accidentes}
 g2 <-ggplot(data = accidentes) +
@@ -158,10 +203,28 @@ Uno de los aspectos más importantes a la hora de evaluar un incidente de tráns
 Y una tabla de frecuencias relacionada a esta variable es la siguiente:
 
 ```{r Tabla de frecuencias para el diseño}
-datatable(freq(accidentes$DISEÑO))
+customGreen = "#DeF7E9"
+
+frecdiseno <- as.data.frame(freq(accidentes$DISEÑO))
+
+frecdiseno <- frecdiseno %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabdiseno <- formattable(frecdiseno, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+diseno <- round(tabdiseno, 2)
+diseno
 ```
 
-Revisando la tabla anterior se tiene que la infraestructura vial en la que más incidentes de tránsito sucedieron en Medellín entre el 2014 y el 2020 es el ***tramo de vía***, pues en estos se dieron el 69,29 % del total de accidentes observados en la ciudad de Medellín en el periodo mencionado, lo cual es bastante lejano al resto de incidentes. Además, es llamativo observar que el segundo tipo de infraestructura donde más incidentes se dieron son las intersecciones, donde ocurrieron el 16.25 % de los incidentes. Además, donde menos incidentes ocurrieron fue en los pasos inferiores, ya que únicamente el 0.25 % de los accidentes ocurrieron en este tipo de vías.
+Revisando la tabla anterior se tiene que la infraestructura vial en la que más incidentes de tránsito sucedieron en Medellín entre el 2014 y el 2020 es el ***tramo de vía***, pues en estos se dieron el 69,45 % del total de accidentes observados en la ciudad de Medellín en el periodo mencionado, lo cual es bastante lejano al resto de incidentes. Además, es llamativo observar que el segundo tipo de infraestructura donde más incidentes se dieron son las intersecciones, donde ocurrieron el 16.30 % de los incidentes. Además, donde menos incidentes ocurrieron fue en los pasos inferiores, ya que únicamente el 0.25 % de los accidentes ocurrieron en este tipo de vías.
 
 ```{r Gráfico de barras para el diseño}
 g3 <-ggplot(data = accidentes) +
@@ -188,7 +251,25 @@ ggplotly(g5)
 # Mes
 
 ```{r Tabla de frecuencias para el mes}
-datatable(freq(accidentes$MES))
+customGreen = "#DeF7E9"
+
+frecmes <- as.data.frame(freq(accidentes$MES))
+
+frecmes <- frecmes %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabmes <- formattable(frecmes, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+mes <- round(tabmes, 2)
+mes
 ```
 
 ```{r}
@@ -206,7 +287,25 @@ ggplotly(g6)
 # Comuna
 
 ```{r Tabla de frecuencias para la comuna}
-datatable(freq(accidentes$MES))
+customGreen = "#DeF7E9"
+
+frecomuna <- as.data.frame(freq(accidentes$COMUNASMOD))
+
+frecomuna <- frecomuna %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabcomuna <- formattable(frecomuna, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabcomuna, 2)
+comuna
 ```
 
 ```{r}
@@ -224,5 +323,14 @@ ggplotly(g7)
 # Barrio
 
 ```{r Tabla de frecuencias para el barrio}
-datatable(freq(accidentes$BARRIO))
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
 ```
