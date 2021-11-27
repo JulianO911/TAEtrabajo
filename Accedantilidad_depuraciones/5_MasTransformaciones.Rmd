@@ -409,23 +409,57 @@ accidentes <- accidentes %>%
 ```{r}
 accFechaAcc <- accidentes %>% 
   group_by(FECHA, CLASE_ACCIDENTE) %>% 
-  summarise(ACCIDENTES = n())
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 
 ```{r}
 accFechaDis <- accidentes %>%  
   group_by(FECHA, DISEÑO) %>% 
-  summarise(ACCIDENTES = n())
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 ```{r}
 accFechaDisAcc <- accidentes %>%  
   group_by(FECHA, DISEÑO, CLASE_ACCIDENTE) %>% 
-  summarise(ACCIDENTES = n())
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 ```{r}
-save(accidentes, "accidentesMDE.RData")
-save(accFechaDis, "accFechaDiseno.RData")
-save(accFechaAcc, "accFechaTipo.RData")
-save(accFechaDisAcc, "accFechaDisenoTipo.RData")
+save(accidentes, file = "accidentesMDE.RData")
+save(accFechaDis, file = "accFechaDiseno.RData")
+save(accFechaAcc, file = "accFechaTipo.RData")
+save(accFechaDisAcc, file = "accFechaDisenoTipo.RData")
+write.csv(accidentes, file = "accidentesMDE.csv")
 ```
 
