@@ -182,9 +182,16 @@ pre code {
 <h2>Comuna</h2>
 <p>Como se vio al finalizar el primer proceso de depuración, habían varias decenas de barrios en la base de datos desconocidos, y para no dejar sus campos vacíos ni descartarlos para el modelo predictivo se realizó un proceso de imputación usando el método de los vecinos más cercanos, lo cual puede generar algunas diferencias entre el barrio y su comuna en tanto en algunas observaciones el barrio era desconocido pero no su columna, por lo que se debe proceder a la modifación de las columnas para que estos valores coincidan.</p>
 </div>
+<div id="fecha" class="section level2">
+<h2>Fecha</h2>
+<p>Ahora bien, la variable que relaciona la fecha en la que el incidente vial ocurrió es de suma importancia ya que lo que se quiere predecir es precisamente la cantidad y tipo de accidentes que ocurren en la ciudad de Medellín en el 2020 y el 2021 a partir de la información anterior, y para poder facilitar esto se va a a extraer información importante de las fechas registradas, como el día, el mes, el año, el número de la semana y el día de la semana en la que se dio el accidente. Adicionalmente, se van a crear varias variables binarias que van a identificar qué accidentes se dieron en fechas que cumplen las siguientes características.</p>
+<ul>
+<li><strong>Festivo.</strong> Los días festivos son de importancia ya que en ellos se dan operaciones de retorno de miles de ciudadanos que previamente salieron de la ciudad hacia otros municipios de la región y el país, lo cual podría explicar varios accidentes registrados en la base de datos. También se agregan a nochebuena (24 de diciembre de cada año) y nochevieja (31 de diciembre de cada año).</li>
+<li><strong>Feria de flores.</strong> La feria de flores es el evento más icónico de la ciudad de Medellín y uno de los más reconocidos de Colombia, lo cual podría estimular el uso de vehículos para asistir a diferentes eventos de esta feria, así como el tránsito de más personas que llegan de otros lugares del país o del mundo para participar en las actividades de la feria de flores.</li>
+<li><strong>Final de fútbol.</strong> La ciudad de Medellín tiene dos equipos de fútbol: el Atlético Nacional y el Deportivo Independiente Medellín, los cuales han participado en varias finales de la categoría A del torneo de fútbol nacional, por lo que es conveniente considerarla ya que por la movilización de miles de personas que desean reunirse con familiares y amigos para disfrutar de la cita deportiva juntos podría explicar una alta cantidad de accidentes.</li>
+<li><strong>Quincena.</strong> Se incluyen las quincenas tradicionales, que son el quince y el treinta de cada mes, así como el primero, ya que algunas empresas tienen esquema primero - quince, y también a los días cinco y al veinte de cada mes, puesto que otras empresas y sobre todo la administración pública paga a sus empleados dichos días.</li>
+</ul>
 </div>
-<div id="fecha" class="section level1">
-<h1>Fecha</h1>
 <div id="tipo-de-accidente-por-fecha" class="section level2">
 <h2>Tipo de accidente por fecha</h2>
 <pre><code>## `summarise()` has grouped output by &#39;FECHA&#39;. You can override using the `.groups` argument.</code></pre>
