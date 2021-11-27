@@ -1,8 +1,0 @@
-"0","incidentes_viales = incidentes_viales[,-c(5,7)] # Se elimina las variables DIRECCION ENCASILLADA y EXPEDIENTE"
-"0",""
-"0","incidentes_viales = rename(incidentes_viales, c(MES = ""Gravedad_accidente"")) # Se cambia la variable MES por ""Gravedad_ accidente"""
-"0",""
-"0","incidentes_viales$CLASE_ACCIDENTE[incidentes_viales$CLASE_ACCIDENTE == ""Caida Ocupante""] <- ""Caída Ocupante"""
-"0","incidentes_viales$CLASE_ACCIDENTE[incidentes_viales$CLASE_ACCIDENTE == ""Caída de Ocupante""] <- ""Caída Ocupante"""
-"0","incidentes_viales$DISEÑO[incidentes_viales$DISEÑO == ""Pont\\xF3n""] <- ""Pontón"""
-"0","incidentes_viales$Gravedad_accidente[incidentes_viales$Gravedad_accidente == ""Solo da\\xF1os""] <- ""Solo daños"""
