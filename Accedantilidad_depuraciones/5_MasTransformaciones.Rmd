@@ -344,3 +344,88 @@ accidentes <- accidentes %>%
   mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0))
 ```
 
+```{r}
+# Feria de Flores
+
+#2014
+ff14 <- seq(as.Date("2014-08-01"), by = "day", length.out = 10)
+
+#2015
+ff15 <- seq(as.Date("2015-07-31"), by = "day", length.out = 10)
+
+#2016
+ff16 <- seq(as.Date("2016-07-29"), by = "day", length.out = 10)
+
+#2017
+ff17 <- seq(as.Date("2017-07-28"), by = "day", length.out = 10)
+
+#2018
+ff18 <- seq(as.Date("2018-08-03"), by = "day", length.out = 10)
+
+#2019
+ff19 <- seq(as.Date("2015-08-02"), by = "day", length.out = 10)
+
+#2020
+ff20 <- seq(as.Date("2020-11-01"), by = "day", length.out = 8)
+
+#2021
+ff21 <- seq(as.Date("2021-08-12"), by = "day", length.out = 8)
+
+ff <- c(ff14, ff15, ff16, ff17, ff18, ff19, ff20, ff21)
+
+accidentes <- accidentes %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0))
+```
+
+```{r}
+# Fútbol
+futbol <- c("2014-12-17", "2014-12-17",
+            "2015-06-07", "2015-06-03",
+            "2015-12-16", "2015-12-20",
+            "2016-06-15", "2016-06-19",
+            "2017-06-14", "2017-06-18",
+            "2018-06-06", "2018-06-09",
+            "2018-12-13", "2018-12-17",
+            "2016-01-23", "2016-01-27",
+            "2017-01-21", "2017-01-29",
+            "2018-01-31", "2019-02-07")
+
+futbol <- as.Date(futbol)
+
+accidentes <- accidentes %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0))
+```
+
+```{r}
+# Quincena
+quincena <- c("5", "15", "20", "30")
+
+accidentes <- accidentes %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+```
+
+## Tipo de accidente por fecha
+
+```{r}
+accFechaAcc <- accidentes %>% 
+  group_by(FECHA, CLASE_ACCIDENTE) %>% 
+  summarise(ACCIDENTES = n())
+```
+
+```{r}
+accFechaDis <- accidentes %>%  
+  group_by(FECHA, DISEÑO) %>% 
+  summarise(ACCIDENTES = n())
+```
+```{r}
+accFechaDisAcc <- accidentes %>%  
+  group_by(FECHA, DISEÑO, CLASE_ACCIDENTE) %>% 
+  summarise(ACCIDENTES = n())
+```
+```{r}
+save(accidentes, "accidentesMDE.RData")
+save(accFechaDis, "accFechaDiseno.RData")
+save(accFechaAcc, "accFechaTipo.RData")
+save(accFechaDisAcc, "accFechaDisenoTipo.RData")
+```
+
