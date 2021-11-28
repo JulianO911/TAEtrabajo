@@ -25,15 +25,15 @@ library("sqldf")
 ```
 
 ```{r include=FALSE}
-source_python("imputación_de_barrios_en_python.py")
-accidentes <- lecturaDatos("accidentesMDE2.csv")
+source_python("imputación_de_barrios_en_python2.py")
+accidentes <- lecturaDatos("accidentesMDE.csv")
 accidentes_con_barrio <- accidentesConBarrio(accidentes)
 barrios_pred <- prediccionDeBarrios(accidentes_con_barrio,accidentes)
 imputacionBarrios(barrios_pred,accidentes)
 ```
 
 ```{r include=FALSE}
-accidentes <-read.csv("accidentesConBarrio3.csv", header = TRUE, sep = ",", dec = ".", encoding = "UTF-8")
+accidentes <-read.csv("accidentesConBarrio3_1.csv", header = TRUE, sep = ",", dec = ".", encoding = "UTF-8")
 ```
 
 ```{r include=FALSE}

@@ -59,4 +59,4 @@ def imputacionBarrios(barriosPred,accidentes):
   accidentes[accidentes["BARRIO"].isnull()]
   accidentes["BARRIO"] = accidentes.BARRIO.astype(str)
   accidentesNuevos = accidentes.iloc[:,1:]
-  accidentesNuevos.to_csv('accidentesConBarrio3.csv',index=False)
+  accidentesNuevos.to_csv('accidentesConBarrio3_1.csv',index=False)
