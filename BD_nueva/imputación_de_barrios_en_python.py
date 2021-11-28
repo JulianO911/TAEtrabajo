@@ -5,6 +5,7 @@ import io
 
 def lecturaDatos(datos):
   accidentes = pd.read_csv(datos,encoding="latin-1")
+  accidentes = accidentes.drop("CBML",axis=1)
   return accidentes
 
 #seleccion de datos que tienen barrio y eliminación de NAs
