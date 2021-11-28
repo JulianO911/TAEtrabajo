@@ -1,0 +1,57 @@
+---
+title: "Imputación de barrios"
+author: "Julián Ospina"
+date: "25/11/2021"
+output: html_document
+---
+
+# Imputación de barrios con KNN
+
+Hay un poco más de 20000 observaciones que no tienen asignado un barrio. De manera que para imputarlos, se utilizó el algoritmo KNN utilizando las observaciones que sí tenían barrio para entrenar y validar el modelo. El conjunto de entrada X son las observaciones respecto a las variables AÑO, CLASE ACCIDENTE, COMUNA, HORA, LONGITUD Y LATITUD; y el conjunto de salida corresponde a los barrios de dichas observaciones. Luego de entrenar y evaluar el modelo, se realiza la predicción utilizando las observaciones que no tienen barrio y de esta manera se imputan los barrios. Para más detalle visitar el archivo "imputación_de_barrios.py".
+
+```{r include=FALSE}
+library("reticulate")
+library("DT")
+library("kableExtra")
+library("tidyverse")
+library("knitr")
+library("sqldf")
+```
+
+```{r include=FALSE}
+#py_install("pandas")
+#py_install("numpy")
+#py_install("scikit-learn")
+```
+
+```{r include=FALSE}
+source_python("imputación_de_barrios_en_python.py")
+accidentes <- lecturaDatos("accidentesMDE2.csv")
+accidentes_con_barrio <- accidentesConBarrio(accidentes)
+barrios_pred <- prediccionDeBarrios(accidentes_con_barrio,accidentes)
+imputacionBarrios(barrios_pred,accidentes)
+```
+
+```{r include=FALSE}
+accidentes <-read.csv("accidentesConBarrio3.csv", header = TRUE, sep = ",", dec = ".", encoding = "UTF-8")
+```
+
+```{r include=FALSE}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+```
+
+
+```{r echo = FALSE, warning = FALSE}
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+En la tabla anterior se puede ver que ya no existe algún barrio vacío por lo que la imputación fue un éxito.
+
+
+
