@@ -105,12 +105,10 @@ customGreen = "#2793ff"
 
 frecano <- as.data.frame(freq(accidentes$AÑO))
 
-frecano <- frecano %>% 
-  rename("Frecuencia" = "Freq") %>% 
-  rename("Válidos (%)" = "% Valid") %>% 
-  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
-  rename("Total (%)" = "% Total") %>% 
-  rename("Total acum. (%)" = "% Total Cum.")
+names(frecano)[1] <- "Frecuencia"
+names(frecano)[2] <- "Válidos (%)"
+names(frecano)[3] <- "Válidos acum. (%)"
+names(frecano)[4] <- "Total acum. (%)"
 
 tabano <- formattable(frecano, list(
   `Frecuencia` = color_bar(customGreen),
@@ -153,12 +151,11 @@ customGreen = "#93ff27"
 
 frecclase <- as.data.frame(freq(accidentes$CLASE_ACCIDENTE))
 
-frecclase <- frecclase %>% 
-  rename("Frecuencia" = "Freq") %>% 
-  rename("Válidos (%)" = "% Valid") %>% 
-  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
-  rename("Total (%)" = "% Total") %>% 
-  rename("Total acum. (%)" = "% Total Cum.")
+names(frecclase)[1] <- "Frecuencia"
+names(frecclase)[2] <- "Válidos (%)"
+names(frecclase)[3] <- "Válidos acum. (%)"
+names(frecclase)[4] <- "Total acum. (%)"
+
 
 tablaclase <- formattable(frecclase, list(
   `Frecuencia` = color_bar(customGreen),
@@ -208,12 +205,10 @@ customGreen = "#ff2793"
 
 frecdiseno <- as.data.frame(freq(accidentes$DISEÑO))
 
-frecdiseno <- frecdiseno %>% 
-  rename("Frecuencia" = "Freq") %>% 
-  rename("Válidos (%)" = "% Valid") %>% 
-  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
-  rename("Total (%)" = "% Total") %>% 
-  rename("Total acum. (%)" = "% Total Cum.")
+names(frecdiseno)[1] <- "Frecuencia"
+names(frecdiseno)[2] <- "Válidos (%)"
+names(frecdiseno)[3] <- "Válidos acum. (%)"
+names(frecdiseno)[4] <- "Total acum. (%)"
 
 tabdiseno <- formattable(frecdiseno, list(
   `Frecuencia` = color_bar(customGreen),
@@ -341,6 +336,56 @@ kable(descr(accFechasMP$`Total mes`), digits = 2)
 
 Y de lo anterior se sigue que la cantidad de accidentes promedio por mes es de 3,800, con una desviación estándar 281.27 accidentes mensuales. Además, se observa que el mínimo es de 3,142 accidentes mensuales, lo cual ocurre en junio de 2019; toda vez que el máximo es de 4,405 accidentes mensuales asociado a agosto de 2019. Además, la mediana es de 3,832 accidentes mensuales, lo que quiere decir que en al menos la mitad de los meses de los cuales hay registros cuentan con al menos 3,832 accidentes mensuales observados, toda vez que en la otra mitad se observaron una cantidad inferior de accidentes.
 
+#### Mapa de calor
+
+A continuación se observa un mapa de calor para la cantidad de accidentes observados por día.
+
+```{r}
+# source("https://raw.githubusercontent.com/iascchen/VisHealth/master/R/calendarHeat.R")
+# amznStock = as.data.frame(tidyquant::tq_get(c("AMZN"),get="stock.prices")) # get data using tidyquant
+# amznStock = amznStock[year(amznStock$date) > 2012, ] # Using data only after 2012
+# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
+```
+
+```{r}
+# calendarHeat(as.POSIXct(accFechas$FECHA), as.numeric(accFechas$TOTAL), ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
+# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
+# calendarHeat(as.POSIXct(amznStock$date), amznStock$adjusted, ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
+```
+
+```{r, out.width="150%", message = FALSE, echo = FALSE}
+library("plyr")
+accFechas <- na.omit(accFechas)
+accFechas$weekday = as.POSIXlt(accFechas$FECHA)$wday #finding the day no. of the week
+accFechas$weekdayf<-factor(accFechas$weekday,levels=rev(1:7),
+                           labels=rev(c("L","M","X","J","V","S","D"))
+                           ,ordered=TRUE) # converting the day no. to factor
+
+accFechas$monthf<-factor(month(accFechas$FECHA),levels=as.character(1:12),
+                         labels=c("Ene","Feb","Mar","Abr","May","Jun","Jul",
+                                  "Ago","Sep","Oct","Nov","Dec"),
+                         ordered=TRUE) # finding the month
+
+accFechas$yearmonth<- factor(as.yearmon(accFechas$FECHA)) # finding the year and the month from the date. Eg: Nov 2018
+
+accFechas$week <- as.numeric(format(accFechas$FECHA,"%W")) # finding the week of the year for each date
+
+accFechas<-ddply(accFechas,.(yearmonth),transform,monthweek=1+week-min(week)) # normalizing the week to start at 1 for every month
+
+p <- ggplot(accFechas, aes(monthweek, weekdayf, fill = accFechas$TOTAL)) + 
+     geom_tile(colour = "white") + facet_grid(year(accFechas$FECHA)~monthf)+
+      scale_fill_gradient(low="green", high="red") +
+      xlab("Semana del mes") +
+      ylab("") +
+      ggtitle("Mapa de calor para los accidentes diarios") +
+      labs(fill = "Acc. diarios")
+
+p
+detach("package:plyr", unload=TRUE)
+```
+
+En este resalta inicialmente quea partir del mes de marza de 2020 la cantidad de accidentes registrada por día en la última quincena de marzo y en el mes de abril es muy baja, toda vez que a medida que se va permitiendo la apertura de ciertos sectores económicos fue aumentado progresivamente la acidentalidad. Además, llama la atención que es en el mes de agosto donde se tienen más colores naranjas y oscuras, lo cual indica una alta cantidad de accidentailidad, mientras que en la primera quincena de enera predominan colores suaves y verdosos, que se asocian a bajas tasas de accidentalidad.
+
 # Mes
 
 Ahora se va a realizar la evaluación de la cantidad de accidentes viales ocurridos en la ciudad de Medellín según el mes sin importar el año, para lo cual se puede realizar la siguiente tabla de frecuencias:
@@ -350,12 +395,10 @@ customGreen = "#9327ff"
 
 frecmes <- as.data.frame(freq(accidentes$MES))
 
-frecmes <- frecmes %>% 
-  rename("Frecuencia" = "Freq") %>% 
-  rename("Válidos (%)" = "% Valid") %>% 
-  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
-  rename("Total (%)" = "% Total") %>% 
-  rename("Total acum. (%)" = "% Total Cum.")
+names(frecmes)[1] <- "Frecuencia"
+names(frecmes)[2] <- "Válidos (%)"
+names(frecmes)[3] <- "Válidos acum. (%)"
+names(frecmes)[4] <- "Total acum. (%)"
 
 tabmes <- formattable(frecmes, list(
   `Frecuencia` = color_bar(customGreen),
@@ -423,9 +466,11 @@ g7 <-ggplot(data = accidentes) +
 ggplotly(g7)
 ```
 
-De los esquemas anteriores llama la atención que la comuna en la que más incidentes viales ocurren es en La Candelaria, que es la comuna central de la ciudad de Medellín y que concentra a la mayoría de las sedes de instituciones públicas municipales, departamentales nacionales, así como múltiples negocios y empresas que requieren una ingente cantidad de trabajadores y asimismo atrae a miles de consumidores diariamente. Así, se tiene que en dicha comuna se dan 67,352 incidentes viales o 24.91 % del total, lo que significa que casi uno de cada cuatro accidentes 
+De los esquemas anteriores llama la atención que la comuna en la que más incidentes viales ocurren es en La Candelaria, que es la comuna central de la ciudad de Medellín y que concentra a la mayoría de las sedes de instituciones públicas municipales, departamentales nacionales, así como múltiples negocios y empresas que requieren una ingente cantidad de trabajadores y asimismo atrae a miles de consumidores diariamente. Así, se tiene que en dicha comuna se dan 67,352 incidentes viales o 24.91 % del total, lo que significa que casi uno de cada cuatro accidentes suceden en la comuna de La Candelaria. A continuación, se tiene a la comuna de Laureles-Estadio, la cual registró 27,978 incidentes viales en su territorio. En el otro extremo se tiene que los cuatro territorios en los que menos incidentes viales son corregimientos, en orden de mayor a menor: San Cristóbal (2,758 accidentes de tránsito), Santa Elena (487 accidentes de tránsito), Alta Vista (457 incidentes de tránsito) y San Sebastián de Palmitas (17 incidentes de tránsito), teniendo esta última 457 accidentes de tránsito. Adicionalmente, llama la atención que el corregimiento de San Antonio de Prado, que sumó 4,313 accidentes de tránsito, tuvo más incidentes que dos comunas: Popular (3,822 incidentes de tránsito) y Santa Cruz (3,437 accidentes de tránsito).
 
 # Barrio
+
+Respecto a los barrios, se tiene que los barrios en los que más accidentes de tránsito son Corazón de Jesús (La Candelaria) con 16,084 accidentes de tránsito, La Candelaria (La Candelaria) coon 5,915 accidentes de tránsito y Caribe (Castilla) con  5,619 incidentes de tránsito en total, siendo el último caracterizado por estar en las inmediaciones de la Terminal de Transportes Norte de la ciudad de Medellín, así como varios intercambios hacia los cuatro puntos cardinales de la ciudad, así como salidas hacia la autopista Medellín - Bogotá y vías que van hacia el Caribe colombiano y hacia el occidente antioqueño.
 
 ```{r Tabla de frecuencias para el barrio}
 barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
