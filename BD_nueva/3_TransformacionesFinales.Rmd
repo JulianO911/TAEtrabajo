@@ -2,8 +2,32 @@
 title: "Transformaciones finales de la base de datos"
 author: "Equipo de TAE"
 date: "26/11/2021"
-output: html_document
+output: 
+  html_document:
+    toc: yes
+    toc_float: true
 ---
+<style type="text/css">
+.main-container {
+  max-width: 2500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+<style>
+body {
+text-align: justify}
+</style>
+
+body{
+  font-family: Helvetica;
+  font-size: 16pt;
+}
+/* Headers */
+h1,h2,h3,h4,h5,h6{
+  font-size: 24pt;
+}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -17,9 +41,9 @@ library("lubridate")
 
 ```{r}
 # Lectura de la base de datos
-load("accidentesMDE.RData")
-# accidentes <- read.csv("accidentesConBarrio2.csv", header = TRUE, sep = ",",
-#                        dec = ".", encoding = "UTF-8")
+#load("accidentesMDE.RData")
+accidentes <- read.csv("accidentesConBarrio3_1.csv", header = TRUE, sep = ",",
+                        dec = ".", encoding = "UTF-8")
 ```
 
 ```{r}
@@ -38,8 +62,8 @@ Para comenzar, se van a eliminar las columnas relacionadas con datos administrat
 
 ```{r}
 # Eliminación de datos administrativos
-accidentes <- accidentes %>% 
-  select(-c("CBML", "DIRECCION", "EXPEDIENTE", "NRO_RADICADO", "NUMCOMUNA",
+accidentes <- accidentes %>%
+  select(-c("DIRECCION", "EXPEDIENTE", "NRO_RADICADO", "NUMCOMUNA",
             "DIRECCION.ENCASILLADA", "FECHA_ACCIDENTES", "HORAS", "LOCATION"))
 ```
 
@@ -266,14 +290,14 @@ accidentes <- accidentes %>%
 
 ```{r}
 problemas <- accidentes %>% 
-  filter(COMUNASMOD == "x") %>% 
+  filter(COMUNASMOD == NA | COMUNASMOD == "" | COMUNASMOD == "x") %>% 
   group_by(BARRIO) %>% 
   summarise(TOTAL = n())
 ```
 
 
 
-## Fecha
+## Fecha y fechas especial.
 
 Ahora bien, la variable que relaciona la fecha en la que el incidente vial ocurrió es de suma importancia ya que lo que se quiere predecir es precisamente la cantidad y tipo de accidentes que ocurren en la ciudad de Medellín en el 2020 y el 2021 a partir de la información anterior, y para poder facilitar esto se va a a extraer información importante de las fechas registradas, como el día, el mes, el año, el número de la semana y el día de la semana en la que se dio el accidente. Adicionalmente, se van a crear varias variables binarias que van a identificar qué accidentes se dieron en fechas que cumplen las siguientes características.
 
@@ -281,6 +305,20 @@ Ahora bien, la variable que relaciona la fecha en la que el incidente vial ocurr
 - **Feria de flores.** La feria de flores es el evento más icónico de la ciudad de Medellín y uno de los más reconocidos de Colombia, lo cual podría estimular el uso de vehículos para asistir a diferentes eventos de esta feria, así como el tránsito de más personas que llegan de otros lugares del país o del mundo para participar en las actividades de la feria de flores.
 - **Final de fútbol.** La ciudad de Medellín tiene dos equipos de fútbol: el Atlético Nacional y el Deportivo Independiente Medellín, los cuales han participado en varias finales de la categoría A del torneo de fútbol nacional, por lo que es conveniente considerarla ya que por la movilización de miles de personas que desean reunirse con familiares y amigos para disfrutar de la cita deportiva juntos podría explicar una alta cantidad de accidentes.
 - **Quincena.** Se incluyen las quincenas tradicionales, que son el quince y el treinta de cada mes, así como el primero, ya que algunas empresas tienen esquema primero - quince, y también a los días cinco y al veinte de cada mes, puesto que otras empresas y sobre todo la administración pública paga a sus empleados dichos días.
+
+Adicionalmente, para facilitar la manipulación de las fechas, se generan a partir de la fecha reportada en el IPAT las siguientes columnas:
+
+- **Día modificado.** Componente del día de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Mes modificado.** Componente del mes de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Año modificado.** Componente del año de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Semana modificada uno.** Número de la semana en el año en la que se dio un accidente de tránsito observado, teniendo en cuenta que la primera semana va del primero a siete de enero, la segunda va del ocho al catorce de enero y así sucesivamente sin considerar el día de la semana asociada a cada día.
+- **Semana modificada dos.** Número de la semana del año en la que se dio un accidente de tránsito observado considerando el día en el que comienza el año. Así, si un año comienza el día sabado, entonces el primero y el segundo de enero son la primera semana, pero el tres de enero, siendo lunes, registra una nueva semana, que en este caso es la segunda, y así sucesivamente.
+- **Día semana.** Nombre del día de la semana en la que se dio un accidente de tránsito observado.
+- **Mes semana.** Mes en el que se dio un accidente de tránsito según la fecha formalmente registrada en el IPAT.
+- **Festivo.** Identificación de días asociados a festivos.
+- **Flores.** Identificación de días asociados a la celebración de la Feria de las Flores en la ciudad.
+- **Fútbol.** Identificación de días en los que algún equipo local de fútbol participó en una final de fútbol de la categoría primera del país.
+- **Quincena.** Identificación de días en los que las empresas y las instituciones públicas y privadas pagan a sus empleados formalos sus quincenas.
 
 ```{r}
 accidentes <- accidentes %>% 
@@ -415,7 +453,9 @@ accidentes <- accidentes %>%
 
 ## Tipo de accidente por fecha
 
-```{r}
+Finalmente, para facilitar el estudio de los diferentes tipos de accidente y del diseño de vías, se generan unas bases de datos que agrupan el tipo de accidente sucedido sumando las observaciones que tienen en común aspectos como la fecha, el diseño de la vía o el barrio.
+
+```{r, message = FALSE}
 accFechaAcc <- accidentes %>% 
   group_by(FECHA, CLASE_ACCIDENTE) %>% 
   summarise(ACCIDENTES = n()) %>% 
@@ -432,7 +472,7 @@ accFechaAcc <- accidentes %>%
   mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 
-```{r}
+```{r, message = FALSE}
 accFechaDis <- accidentes %>%  
   group_by(FECHA, DISEÑO) %>% 
   summarise(ACCIDENTES = n()) %>% 
@@ -448,7 +488,7 @@ accFechaDis <- accidentes %>%
   mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
   mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
-```{r}
+```{r, message = FALSE}
 accFechaDisAcc <- accidentes %>%  
   group_by(FECHA, DISEÑO, CLASE_ACCIDENTE) %>% 
   summarise(ACCIDENTES = n()) %>% 
@@ -464,7 +504,6 @@ accFechaDisAcc <- accidentes %>%
   mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
   mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
-
 ```{r}
 save(accidentes, file = "accidentesMDE2.RData")
 save(accFechaDis, file = "accFechaDiseno.RData")
