@@ -46,6 +46,7 @@ library("DT")
 library("iClick")
 library("lubridate")
 library("formattable")
+library("nortest")
 ```
 
 ```{r Lectura de la base de datos}
@@ -100,7 +101,7 @@ print(dfSummary(accidentes), method = "render")
 A continuación se observa una tabla de frecuencias para los años de los incidentes registrados en la base de datos de incidentes.
 
 ```{r Tabla de frecuencias para el año}
-customGreen = "#DeF7E9"
+customGreen = "#2793ff"
 
 frecano <- as.data.frame(freq(accidentes$AÑO))
 
@@ -148,7 +149,7 @@ La clase de accidente es una variable categórica de orden nominal que define de
 Teniendo esto presente, se puede definir la siguiente tabla de frecuencias para esta base de datos:
 
 ```{r Tabla de frecuencias para la clase de accidentes}
-customGreen = "#DeF7E9"
+customGreen = "#93ff27"
 
 frecclase <- as.data.frame(freq(accidentes$CLASE_ACCIDENTE))
 
@@ -203,7 +204,7 @@ Uno de los aspectos más importantes a la hora de evaluar un incidente de tráns
 Y una tabla de frecuencias relacionada a esta variable es la siguiente:
 
 ```{r Tabla de frecuencias para el diseño}
-customGreen = "#DeF7E9"
+customGreen = "#ff2793"
 
 frecdiseno <- as.data.frame(freq(accidentes$DISEÑO))
 
@@ -240,18 +241,112 @@ ggplotly(g3)
 
 # Fecha
 
-```{r}
-g5 <- ggplot(data = accidentes, aes(x = as.Date(FECHA,
-                                         format = "%Y-%m-%d"))) +
-  stat_count() +
-  theme_minimal()
-ggplotly(g5)
+A continuación se muestra un gráfico en el que se muestra la cantidad de accidentes que se dieron en la ciudad de Medellín en cada uno de los días en los que se observaron datos. Para poder ver con mayor detalle algún periodo particular, se recomienda hacer un zoom con las herramientas que aparecen en el extremo superior derecho del gráfico.
+
+```{r, echo = FALSE, message = FALSE}
+# Creación de una base de datos que considera únicamente las fechas
+accFechas <- accidentes %>% 
+  group_by(FECHA) %>% 
+  summarise(TOTAL = n())
+
+fig <- plot_ly(accFechas, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~FECHA, y = ~TOTAL)%>%
+  layout(showlegend = F)
+fig <- fig %>%
+  layout(
+         xaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+
+fig
 ```
+
+Y del esquema anterior llama la atención que la mayoría de días se presentan entre 75y 175 accidentes por día, con algunas excepciones que se salen de estos extremos, de las cuales vale la pena mencionar que aquellas que aquellos picos superiores, es decir, fechas en las que se producen más accidentes en comparación con el resto de días, la mayoría se concentra en los meses de agosto y septiembre. Por otro lado, se debe rescatar que al comenzar cada año también se observa que ocurrencia de mínimos. También llama la atención la caída de accidentes que se presentan en la ciudad de Medellín luego del comienzo del confinamiento nacional como medida de contingencia por la pandemia de la COVID-19 el 18 de marzo de 2020.
+
+Además, de estos datos se pueden rescatar los siguientes estadísticos, excluyendo los datos posteriores al 18 de marzo de 2020 por haber menos tránsito de vehículos que en otros días:
+
+```{r}
+# Accidentalidad prepandemia
+accFechasP <- accFechas %>% 
+  filter(FECHA < as.Date("2020-03-18"))
+kable(descr(accFechasP$TOTAL), digits = 2)
+```
+Y como se observa, el número promedio de accidentes por día es 125 con una desviación estándar de 28.45 accidentes diarios. Además, el día en que menos accidentes ocurrieron fue el 4 de julio de 2014, donde se dieron 24 accidentes (nótese que este es justamente el día en el que se comienzan a tomar datos), toda vez que el día con mayor accidentes fue 4 de agosto de 2021, ya que en él se registraron 234 incidentes viales en la ciudad. Por otro lado, se tiene que la mediana es de 130 accidentes por día, lo que significa que en la mitad de los días se tienen 130 incidentes o más, mientras que en la otra mitad hay 129 accidentes de tránsito o menos. Asimismo, el primer cuantil ocurre en los 107.5 accidentes por día, y el tercer cuantil está asociado a los 144 accidentes viales diarios. Finalmente, se puede observar que el índice de asimetría es -0.4, lo que significa que los datos no son perfectamente simétricos y que tienden más hacia los valores más altos de accidentalidad diarios; además, la curtosis es de -0.06, lo cual significa que la cantidad de accidentes diarios podría tener una distribución parecida a la normal, y el hecho de que sea negativo implica que hay una concentración ligeralmente mayos datos hacia la media que en una distribución normal, lo que implica que la ocurrencia de valores extremos es menos frecuente que en una distribución auténticamente normal. Respecto a estos dos últimos parámetros, resulta interesante realizar un histograma para poder observar la distribución de accidentes diarios.
+
+```{r}
+barras <- 1 + 3.33*log(nrow(accFechas))
+g7 <- ggplot(data = accFechas,
+             aes(x = TOTAL)) +
+        geom_histogram(aes(y = (..count..)/sum(..count..)),
+                       fill = "darkblue",
+                       bins = barras) +
+        scale_y_continuous(labels=percent) +
+        ggtitle("Histograma de la cantidad de accidentes diarios en Medellín") +
+        xlab("Cantidad de accidentes diarios") +
+        ylab("Frecuencia absoluta")
+g7
+```
+
+Y en este se observa un gráfico que no se asemeja al de una distribución normal, empezando por el hecho de que la simetría no es muy clara y también por la presencia de dos modas, lo cual no se asemeja a una distribución normal en el sentido que esta tiene una y solo una moda. En todo caso, vale la pena realizar una prueba de hipótesis de normalidad para esta variable mediante el test de Lillifors, que es el test más potente para una alta cantidad de datos y que se basa en una modificación del test de Lillifors. Para ello, se plantean las siguientes hipótesis con un nivel de confianza del 95 % ($\alpha = 0.05$):
+
+$H_0:$ La distribución de la cantidad de accidentes por día en Medellín entre julio de 2014 y marzo de 2020 es normal.
+
+$H_1:$ La distribución de la cantidad de accidentes por día en Medellín entre julio de 2014 y marzo de 2020 **no** es normal.
+
+Y al realizarlo con ayuda de $\color{blue}{\textsf{R}}$ se obtiene un valor p de $V_p < 2.2 \times 10^{-16} < 0.05 = \alpha$, lo cual permite rechazar la hipótesis nula y por tanto se concluye la cantidad de accidentes que suceden en Medellín por día no tienen una distribución normal.
+
+```{r, include = FALSE}
+lillie.test(accFechas$TOTAL)
+```
+
+Ahora bien, para poder tener una mejor visibilidad, se va a hacer la suma de accidentes diarios pero presentados por mes.
+
+```{r}
+accFechasM <- accFechas %>% 
+  mutate(MES = format(as.Date(FECHA), "%Y-%m")) %>% 
+  group_by(MES) %>% 
+  summarise(`Total mes` = sum(TOTAL))
+```
+
+```{r}
+fig2 <- plot_ly(accFechasM, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~MES, y = ~`Total mes`)%>%
+  layout(showlegend = F)
+fig <- fig %>%
+  layout(
+         xaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+
+fig2
+```
+
+Y en esta se puede constatar lo que ya se había mencionado previamente y es que existen mínimos en los meses de enero y máximos en los meses de agosto. Además, llama la atención que hay comportamiento aproximadamente uniforme en todos los años, salvo en el 2019, donde el pico del mes de agosto se preserva para los meses de septiembre y octubre. Además, se debe observar que en febrero del año 2020 se tiene un comportamiento semejante al de año previos hasta el mes de marzo, donde se da inicio al confinamiento nacional por cuenta de la pandemia del virus de la COVID-19. De aquí se pueden obtener los siguientes estadísticos excluyendo los valores posteriores a marzo de 2020:
+
+```{r}
+accFechasMP <- accFechasM %>% 
+  filter(MES < "2020-03")
+kable(descr(accFechasMP$`Total mes`), digits = 2)
+```
+
+Y de lo anterior se sigue que la cantidad de accidentes promedio por mes es de 3,800, con una desviación estándar 281.27 accidentes mensuales. Además, se observa que el mínimo es de 3,142 accidentes mensuales, lo cual ocurre en junio de 2019; toda vez que el máximo es de 4,405 accidentes mensuales asociado a agosto de 2019. Además, la mediana es de 3,832 accidentes mensuales, lo que quiere decir que en al menos la mitad de los meses de los cuales hay registros cuentan con al menos 3,832 accidentes mensuales observados, toda vez que en la otra mitad se observaron una cantidad inferior de accidentes.
 
 # Mes
 
+Ahora se va a realizar la evaluación de la cantidad de accidentes viales ocurridos en la ciudad de Medellín según el mes sin importar el año, para lo cual se puede realizar la siguiente tabla de frecuencias:
+
 ```{r Tabla de frecuencias para el mes}
-customGreen = "#DeF7E9"
+customGreen = "#9327ff"
 
 frecmes <- as.data.frame(freq(accidentes$MES))
 
@@ -272,9 +367,11 @@ mes <- round(tabmes, 2)
 mes
 ```
 
+La cual se puede acompañar del siguiente gráfico de barras.
+
 ```{r}
 g6 <-ggplot(data = accidentes) +
-        geom_bar(mapping = aes(x = MES)) +
+        geom_bar(mapping = aes(x = fct_infreq(MES))) +
   ggtitle("Tipo de infraestructa en la que se dio el incidente",
           subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
   xlab("Tipo de infraestructura") +
@@ -284,7 +381,11 @@ g6 <-ggplot(data = accidentes) +
 ggplotly(g6)
 ```
 
+Y como se observa, el mes en el que más accidentes se registran es agosto, que cuenta con 27,001 accidentes observados en dicho mes, seguido por 25,018 incidentes viales que ocurrieron durante los diferentes meses de julio, y en tercer lugar se tiene al mes de septiembre que registra a 24,129 accidentes. Además, los dos meses con menos incidentes viales registrados son enero con 20,098 incidentes viales y abril con 19,293 accidentes. Finalmente, es llamativo notar que los seis últimos meses del año se reparten los seis primeros lugares y que los meses del primer semestre hacen lo propio con los últimos seis puestos.    
+
 # Comuna
+
+A continución se visualiza la tabla de frecuencias para la cantidad de incidentes de tránsito registrados en las dieciséis comunas y cinco corregimientos de la ciudad de Medellín:
 
 ```{r Tabla de frecuencias para la comuna}
 customGreen = "#DeF7E9"
@@ -308,9 +409,11 @@ comuna <- round(tabcomuna, 2)
 comuna
 ```
 
+Y se acompaña con el siguiente gráfico de barras:
+
 ```{r}
 g7 <-ggplot(data = accidentes) +
-        geom_bar(mapping = aes(x = COMUNA)) +
+        geom_bar(mapping = aes(x = fct_infreq(COMUNASMOD))) +
   ggtitle("Tipo de infraestructa en la que se dio el incidente",
           subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
   xlab("Tipo de infraestructura") +
@@ -319,6 +422,8 @@ g7 <-ggplot(data = accidentes) +
   theme(axis.text.x = element_text(angle = 45))
 ggplotly(g7)
 ```
+
+De los esquemas anteriores llama la atención que la comuna en la que más incidentes viales ocurren es en La Candelaria, que es la comuna central de la ciudad de Medellín y que concentra a la mayoría de las sedes de instituciones públicas municipales, departamentales nacionales, así como múltiples negocios y empresas que requieren una ingente cantidad de trabajadores y asimismo atrae a miles de consumidores diariamente. Así, se tiene que en dicha comuna se dan 67,352 incidentes viales o 24.91 % del total, lo que significa que casi uno de cada cuatro accidentes 
 
 # Barrio
 

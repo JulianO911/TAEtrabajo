@@ -147,7 +147,7 @@ com08 <- c("Villa Hermosa", "La Mansión", "Llanaditas", "La Ladera",
            "Golondrinas", "Batallón Girardot", "San Miguel", "Los Mangos",
            "Sucre", "El Pinal", "Trece de Noviembre", "La Libertad",
            "Villatina", "San Antonio", "Las Estancias", "Villa Turbay",
-           "La Sierra", "Villa Liliam", "Esfuerzos de Paz No. 1",
+           "La Sierra", "Villa Lilliam", "Esfuerzos de Paz No. 1",
            "Esfuerzos de Paz No. 2", "Enciso")
 
 ## Comuna No. 09 - Buenos Aires
