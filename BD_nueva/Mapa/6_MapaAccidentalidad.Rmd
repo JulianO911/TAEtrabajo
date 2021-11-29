@@ -1,0 +1,126 @@
+---
+title: "Mapa"
+author: "Equipo de TAE"
+date: "28/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library("leaflet")
+library("rgdal")
+```
+
+```{r}
+barriosMDE <- readOGR(".",layer="Limite_Barrio_Vereda_Catastral")
+aux <- as.data.frame(barriosMDE)
+```
+```{r}
+# Cambio de nombres
+barriosMDE$NOMBRE_BAR[5] <- "Los Balsos No. 1"
+barriosMDE$NOMBRE_BAR[9] <- "El Nogal - Los Almendros"
+barriosMDE$NOMBRE_BAR[15] <- "La Mota"
+barriosMDE$NOMBRE_BAR[19] <- "Playón de los Comuneros"
+barriosMDE$NOMBRE_BAR[20] <- "El Velódromo"
+barriosMDE$NOMBRE_BAR[29] <- "Área de expansión San Antonio de Prado"
+barriosMDE$NOMBRE_BAR[32] <- "Belalcázar"
+barriosMDE$NOMBRE_BAR[33] <- "Los Balsos No. 2"
+barriosMDE$NOMBRE_BAR[35] <- "Suburbano Travesías"
+barriosMDE$NOMBRE_BAR[48] <- "Bomboná No. 1"
+barriosMDE$NOMBRE_BAR[52] <- "Alfonso López"
+barriosMDE$NOMBRE_BAR[55] <- "San Martín de Porres"
+barriosMDE$NOMBRE_BAR[56] <- "Santa Lucía"
+barriosMDE$NOMBRE_BAR[61] <- "Andalucía"
+barriosMDE$NOMBRE_BAR[63] <- "Fátima"
+barriosMDE$NOMBRE_BAR[67] <- "Campo Valdés No. 2"
+barriosMDE$NOMBRE_BAR[70] <- "Los Ángeles"
+barriosMDE$NOMBRE_BAR[76] <- "Doce de Octubre No. 2"
+barriosMDE$NOMBRE_BAR[83] <- "Alejandro Echavarría"
+barriosMDE$NOMBRE_BAR[87] <- "La Mansión"
+barriosMDE$NOMBRE_BAR[92] <- "Bermejal - Los Álamos"
+barriosMDE$NOMBRE_BAR[95] <- "El Corazón - El Morro"
+barriosMDE$NOMBRE_BAR[96] <- "Berlín"
+barriosMDE$NOMBRE_BAR[99] <- "Bomboná No. 2"
+barriosMDE$NOMBRE_BAR[109] <- "San José de la Cima No. 1"
+barriosMDE$NOMBRE_BAR[112] <- "La América"
+barriosMDE$NOMBRE_BAR[125] <- "El Corazón"
+barriosMDE$NOMBRE_BAR[130] <- "Las Lomas No. 2"
+barriosMDE$NOMBRE_BAR[132] <- "San José de la Cima No. 2"
+barriosMDE$NOMBRE_BAR[133] <- "Barrio de Jesús"
+barriosMDE$NOMBRE_BAR[135] <- "Santa María de los Ángeles"
+barriosMDE$NOMBRE_BAR[138] <- "Diego Echavarría"
+barriosMDE$NOMBRE_BAR[141] <- "Área de expansión Altavista"
+barriosMDE$NOMBRE_BAR[142] <- "Aguas Frías"
+barriosMDE$NOMBRE_BAR[144] <- "San Javier No. 1"
+barriosMDE$NOMBRE_BAR[148] <- "Cabecera Urbana San Cristóbal"
+barriosMDE$NOMBRE_BAR[151] <- "San Germán"
+barriosMDE$NOMBRE_BAR[156] <- "Nueva Villa de Aburrá"
+barriosMDE$NOMBRE_BAR[166] <- "San Javier No. 2"
+barriosMDE$NOMBRE_BAR[167] <- "Área de expansión Belén Rincón"
+barriosMDE$NOMBRE_BAR[170] <- "Área de expansión Altos de Calasanz"
+barriosMDE$NOMBRE_BAR[176] <- "Suburbano La Palma - El Patio"
+barriosMDE$NOMBRE_BAR[178] <- "Estación Villa"
+barriosMDE$NOMBRE_BAR[185] <- "Campo Valdés No. 2"
+barriosMDE$NOMBRE_BAR[187] <- "Travesías"
+barriosMDE$NOMBRE_BAR[192] <- "López de Mesa"
+barriosMDE$NOMBRE_BAR[194] <- "Suburbano Aguas Frías"
+barriosMDE$NOMBRE_BAR[195] <- "María Cano Carambolas"
+barriosMDE$NOMBRE_BAR[210] <- "El Progreso No. 2"
+barriosMDE$NOMBRE_BAR[215] <- "Unidad Deportiva Atanasio Girardot"
+barriosMDE$NOMBRE_BAR[219] <- "El Rincón"
+barriosMDE$NOMBRE_BAR[220] <- "Barrio Cerro El Volador"
+barriosMDE$NOMBRE_BAR[225] <- "Santa Inés"
+barriosMDE$NOMBRE_BAR[230] <- "Loma de los Bernal"
+barriosMDE$NOMBRE_BAR[233] <- "San Joaquín"
+barriosMDE$NOMBRE_BAR[234] <- "Suburbano Pedregal Alto"
+barriosMDE$NOMBRE_BAR[237] <- "Cataluña"
+barriosMDE$NOMBRE_BAR[238] <- "Jardín Botánico"
+barriosMDE$NOMBRE_BAR[249] <- "Simón Bolívar"
+barriosMDE$NOMBRE_BAR[251] <- "San José del Manzanillo"
+barriosMDE$NOMBRE_BAR[257] <- "La Piñuela"
+barriosMDE$NOMBRE_BAR[261] <- "Moscú No. 1"
+barriosMDE$NOMBRE_BAR[264] <- "Suburbano El Plan"
+barriosMDE$NOMBRE_BAR[267] <- "Suburbano El Tesoro"
+barriosMDE$NOMBRE_BAR[270] <- "Hospital San Vicente de Paúl"
+barriosMDE$NOMBRE_BAR[271] <- "Nueva Villa de la Iguaná"
+barriosMDE$NOMBRE_BAR[273] <- "Belén"
+barriosMDE$NOMBRE_BAR[276] <- "Alejandría"
+barriosMDE$NOMBRE_BAR[278] <- "Los Alcázares"
+barriosMDE$NOMBRE_BAR[280] <- "San José de la Montaña"
+barriosMDE$NOMBRE_BAR[286] <- "Boyacá"
+barriosMDE$NOMBRE_BAR[287] <- "Córdoba"
+barriosMDE$NOMBRE_BAR[289] <- "Santa Mónica"
+barriosMDE$NOMBRE_BAR[293] <- "Corazón de Jesús"
+barriosMDE$NOMBRE_BAR[307] <- "Barrio Colón"
+barriosMDE$NOMBRE_BAR[314] <- "La Palma - El Patio"
+barriosMDE$NOMBRE_BAR[315] <- "Área de expansión Pajarito"
+barriosMDE$NOMBRE_BAR[321] <- "Santa Fe"
+barriosMDE$NOMBRE_BAR[327] <- "Doce de Octubre No. 2"
+barriosMDE$NOMBRE_BAR[329] <- "Moscú No. 2"
+barriosMDE$NOMBRE_BAR[331] <- "Jesús Nazareno"
+barriosMDE$NOMBRE_BAR[339] <- "Batallón Girardot"
+barriosMDE$NOMBRE_BAR[346] <- "Héctor Abad Gómez"
+barriosMDE$NOMBRE_BAR[348] <- "Antonio Nariño"
+```
+
+```{r}
+m=leaflet(barriosMDE)
+m=addTiles(m)
+m
+```
+
+```{r}
+m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR)
+m=addTiles(m)
+m
+```
+
+```{r}
+colores=sample(x=c("orange","green","yellow"),size=length(barriosMDE),replace=TRUE)
+m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=colores)
+m
+```
+
