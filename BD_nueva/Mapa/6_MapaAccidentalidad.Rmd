@@ -120,7 +120,7 @@ m
 
 ```{r}
 colores=sample(x=c("orange","green","yellow"),size=length(barriosMDE),replace=TRUE)
-m=addPolygons(m,popup=barriosMDE,color=colores)
+m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=colores)
 m
 ```
 
