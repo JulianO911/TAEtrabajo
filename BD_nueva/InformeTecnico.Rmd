@@ -1,0 +1,1667 @@
+---
+title: "Informe técnico"
+author: "Simón Cuartas Rendón"
+date: "30/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r Paquetes a emplear, include = FALSE, warning = FALSE}
+library("DT")
+library("kableExtra")
+library("tidyverse")
+library("knitr")
+library("sqldf")
+```
+
+
+# Introducción
+
+En el marco del curso de **Técnicas de Aprendizaje Estadístico** de la Universidad Nacional de Colombia, sede Medellín, se pretende analizar la base de datos de accidentalidad vial en la ciudad de Medellín entre los años 2014 y 2020 con el objetivo de realizar predicciones a partir de este documento para los años 2020 y 2021. Para ello, se va a comenzar realizando una exploración de la base de datos que permita hallar inconsistencias, problemas, datos faltantes y errores, entre otros, con la base de datos, de tal manera que pueda ser organizada para poderla emplear adecuadamente en función de los objetivos de este proyecto.
+
+# Lectura de la base de datos
+
+
+```{r}
+incidentes <- read.csv("incidentes_viales_act.csv", header = TRUE, sep = ";", dec = ".", encoding = "UTF-8")
+```
+
+A continuación se va a mostrar cuál es la estructura de la base de datos que es descargada directamente del portal MeData
+
+```{r Estructura inicial de la base de datos, echo = FALSE, warning = FALSE}
+glimpse(incidentes)
+filas <- nrow(incidentes)
+```
+
+Y como se observa, esta base de datos posee un total de `r filas`, cada una con dieciocho características: año, CBML, clase de accidente, dirección, dirección encasillada, diseño, expediente, fecha de accidente, fecha de accidentes, mes, número de radicado, número de comuna, barrio, comuna, ubicación (latitud - longitud), coordenada x de la ubicación y coordenada y de la ubicación, estas últimas con origen Magna Medellín. Revisando esto, se comienzan a notar un par de inconvenientes con la base de datos. 
+
+Con lo anterior, se procede a la verificación de cada una de las variables de esta base de datos para proceder con su respectiva corrección, incluyendo también una modificación en el tipo de variable que registra $\color{blue}{\textsf{R}}$ para cada variable, ya que como se observa, la mayoría de ellas son almacenadas como tipo carácter ($\texttt{chr}$), cuando debería ser realmente de tipo factor, fecha o numérico.
+
+# Revisión de las características de la base de datos
+
+## Año
+
+Esta base de datos dice tener un registro de accidentes de la ciudad de Medellín entre los años 2014 y 2020, por lo que es de esperar que los niveles de medición de esta variable sean los años que se dan dicho periodo. Y al revisar, se obtiene que los verdaderos niveles de medición para la variable ***año*** son:
+
+```{r Años de la base de datos}
+accidentes <- incidentes %>% 
+  mutate(AÑO = as.factor(AÑO))
+levels(accidentes$AÑO)
+```
+
+Y como se observa, este es el caso, ya que todos los años entre el 2014 y el 2020, incluyéndolos a ambos, son los niveles de medición para esta base de datos; no obstante, hay un inconveniente para el año **2019**, ya que además del propio nivel de medición para esa anualidad, se tiene un segundo nivel que es llamado "*2019\\r*", lo cual debe ser corregido para que haya uniformidad y unicidad en los años. De manera que, al corregir esto y chequear nuevamente los niveles de medición para esta variable, se obtiene:
+
+```{r}
+levels(accidentes$AÑO)[levels(accidentes$AÑO) == "2019\\r"] <- "2019"
+levels(accidentes$AÑO)
+```
+
+Lo cual es correcto.
+
+$ CBML
+
+Según la documentación de la base de datos, disponible en la web de MeData, la variable ***CBML*** hace referencia al código catastral de la comuna, barrio, manzana o lote catastral en la cual se dio el incidente observado. Además, considerando los objetivos de la base de datos, la información catastral no resulta relevante, por lo cual solo se va a proceder con la reforma de la tipología de esta variable, ya que se trata de una variable categórica nominal, para dejarla como una variable de tipo *factor*.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CBML = as.factor(CBML))
+```
+
+## Clase de accidente
+
+La clase de accidente es una variable categórica nominal, que incluye los siguientes niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = as.factor(CLASE_ACCIDENTE))
+levels(accidentes$CLASE_ACCIDENTE)
+```
+
+Y como se observa, hay varias categorías que hacen referencia a lo mismo, como lo son "*Caida de Ocupante*", "*Caída de Ocupante*", "*Caida Ocupante*" y "*Caída Ocupante*", que como se observa, se refieren a la **caída del ocupante**, lo que merece una corrección para que exista unicidad en esta característica de la base de datos. Por otro lado, existen `r sum(!complete.cases(accidentes$CLASE_ACCIDENTE))` observaciones que no incluyen ninguna descripción del tipo de accidente, por lo que serán registradas como *NA*s. 
+
+Dicho lo anterior, al realizar las correcciones correspondientes y al revisar nuevamente los niveles de medición para esta variable, se obtienen:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
+                           "Caída Ocupante" = "Caída del ocupante",
+                           "Caida de Ocupante" = "Caída del ocupante",
+                           "Caída de Ocupante" = "Caída del ocupante",
+                           "Caida Ocupante" = "Caída del ocupante"))
+levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- NA
+nas_clase_acc <- sum(is.na(accidentes$CLASE_ACCIDENTE))
+levels(accidentes$CLASE_ACCIDENTE)
+```
+
+Lo que es adecuado. Además, se debe tener en cuenta que esta variable contiene `r nas_clase_acc` observaciones para las cuales no se registró la clase de accidente, por lo cual serán revisadas más adelante para proceder con su imputación o, si aplica, su remoción.
+
+## Dirección
+
+La dirección se refiere al domicilio catastral del predio más cercano al punto en el que se dio el incidente de tránsito, de lo cual se deduce que esta es una variable categórica nominal, pero se puede pensar inicialmente que esta variable tendrá demasiados niveles diferentes, para lo cual se va a comenzar revisando la cantidad de direcciones únicas en la base de datos para evaluar si merece la pena revisar los niveles uno a uno como se acabó de hacer con la clase de accidente.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION = as.factor(DIRECCION)) %>% 
+  mutate(DIRECCION = str_trim(DIRECCION))
+unicos_dir <- length(unique(accidentes$DIRECCION))
+nas_direc <- sum(is.na(accidentes$DIRECCION))
+vacio_direc <- sum(!complete.cases(accidentes$DIRECCION))
+```
+
+Y con ayuda de $\color{blue}{\textsf{R}}$ se verifica que existen `r unicos_dir` registros de dirección diferentes, lo cual es una cantidad elevada, por lo que se omite la evaluación de cada uno de los niveles para poder determinar la unicidad. En cambio, es adecuado chequear si existen observaciones vacías o con NAs, pero al hacer la revisión con $\color{blue}{\textsf{R}}$, se constanta que no existen este tipo de casos.
+
+
+## Dirección encasillada
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DIRECCION.ENCASILLADA = as.factor(DIRECCION.ENCASILLADA)) %>% 
+  mutate(DIRECCION.ENCASILLADA = str_trim(DIRECCION.ENCASILLADA))
+accidentes$DIRECCION.ENCASILLADA[accidentes$DIRECCION.ENCASILLADA == "0"] <- NA
+unicos_direnc <- length(unique(accidentes$DIRECCION.ENCASILLADA))
+nas_direnc <- sum(is.na(accidentes$DIRECCION.ENCASILLADA))
+vacio_direnc <- sum(accidentes$DIRECCION.ENCASILLADA == "")
+```
+
+Realizando un procedimiento análogo al de la ***dirección***, se obtiene que existen `r unicos_direnc`, lo cual nuevamente resulta en un valor bastante elevado como para revisar cada uno de los niveles por separado para asegurar la unicidad. Por otro lado, se tiene que esta base de datos cuenta con `r nas_direnc` valores registrados como *NA*s y `r vacio_direnc` direcciones encasilladas vacías.
+
+## Diseño
+
+La variable ***diseño*** se refiere al tipo de infraestructura vial que generó o en la cual se dio el incidente vial registrado, y sus niveles de medición se observan a continuación:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = as.factor(DISEÑO))
+levels(accidentes$DISEÑO)
+```
+
+Y se constata que existen errores en la codificación de este archivo, por lo que se procede a su corrección, así como a cambio de errores ortográficos en algunos niveles, con lo que se obtienen los siguientes nuevos niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(DISEÑO = recode(DISEÑO,
+                         "Ciclo Ruta" = "Ciclorruta",
+                         "Interseccion" = "Intersección",
+                         "Lote o Predio" = "Lote o predio",
+                         "Paso a Nivel" = "Paso a nivel",
+                         "Paso Elevado" = "Paso elevado",
+                         "Paso Inferior" = "Paso inferior",
+                         "Tramo de via" = "Tramo de vía",
+                         "Tunel" = "Túnel",
+                         "Via peatonal" = "Vía peatonal"))
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == ""] <- NA
+levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == "Pont\\xF3n"] <- "Pontón"
+levels(accidentes$DISEÑO)
+```
+
+Que es más adecuado.
+
+## Expediente
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(EXPEDIENTE = as.factor(EXPEDIENTE))
+unicos_exp <- length(unique(accidentes$EXPEDIENTE))
+levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- NA
+nas_exp <- sum(is.na(accidentes$EXPEDIENTE))
+vacio_exp <- sum(accidentes$EXPEDIENTE == "")
+```
+
+
+El expediente es un número que se le asigna a la ficha de registro de cada incidente vial según su orden de llegada, y considerando esta definición, es de esperar que todos los incidentes de la base de datos tengan números de expediente diferentes, en tanto corresponden a accidentes distintos, es decir, debe haber unicidad en esta variable. Sin embargo, al revisar la base de datos se obtiene que existen `r unicos_exp` expedientes únicos, lo que significa que esta variable cuenta con `r filas - unicos_exp` expedientes que se encuentran repetidos. Adicional a lo anterior, vale la pena destacar que para esta variable hay `r nas_exp` expedientes clasificados inicialmente como *NA*s y `r vacio_exp` observaciones con expediente vacío.
+
+```{r}
+repetidos_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+```
+
+Al hacer la revisión de los expedientes repetidos, se observa que algunos de ellos parecen tener el expediente duplicado debido a que no lo tienen y son inscritos en la base de datos como "*No reportados*".
+
+Adicionalmente, se verifica que todos los expedientes tienen la característica de tener como primer carácter la letra "*A*", de manera que se cambian los expedientes que no comienzan con la letra "A" como *NA*s. Ahora, se va a revisar qué sucede con los expedientes que tienen asociadas dos o más observaciones en la base de datos, dejando de lado a las observaciones con *NA*s, ya que con estas se debe realizar un procedimiento diferente.
+
+```{r}
+accidentes$EXPEDIENTE[substr(accidentes$EXPEDIENTE, 1, 1) != "A"] <- NA
+```
+
+
+``` {r}
+dobles_exp <- accidentes %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 1)
+dobles_exp2 <- dobles_exp[is.na(dobles_exp$EXPEDIENTE) == FALSE, ]
+triples_exp <- dobles_exp %>% 
+  group_by(EXPEDIENTE) %>% 
+  filter(n() > 2)
+```
+
+Se observa que hay `r nrow(dobles_exp2)` casos en los que hay duplicación o triplicación de expedientes, de los cuales dos son triplicaciones (A000311508 y A000311508). Ahora bien, al revisar los registros duplicados, se observa que algunos de ellos tienen diferencias en alguna otra característica, como la ubicación o el barrio en el cual se dio el incidente, por lo cual se debe asumir que se trata de dos expedientes diferentes a pesar de tener el mismo serial, mientras que hay otros, que de hecho son la mayoría, que por sus demás características permiten deducir que se tratan del mismo incidente de tránsito, pero que tienen alguna característica como *NA* en una repetición y completa en la otra, sobre todo con el diseño de la infraestructura en la que se dio el incidente. Con esto en mente, se procede a filtrar aquellas observaciones con expediente repetido y con diseño de infraesructura desconocido para removerlas.
+
+```{r}
+dobles_exp4 <- dobles_exp2[(is.na(dobles_exp2$DISEÑO) == TRUE), ]
+dobles_exp5 <- dobles_exp4 %>% 
+  distinct(EXPEDIENTE, .keep_all = TRUE)
+```
+
+```{r}
+accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM dobles_exp5')
+```
+
+## Fecha de accidente
+
+Un asunto importante es la fecha y la hora en la que se dio el accidente. Sin embargo, como se vio al comienza esta característica es asumida por $\color{blue}{\textsf{R}}$ como carácter, lo cual debe ser modificado para que sea de tipo fecha. Además, se van a tomar cada uno de los elementos de esta: el día y la hora, para poderlos tener separados en una nueva variable.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTE = as.POSIXct(FECHA_ACCIDENTE, format = "%d/%m/%Y %H:%M:%S"))
+```
+
+```{r}
+accidentes$FECHA <- as.Date(accidentes$FECHA_ACCIDENTE)
+accidentes$HORA <- format(as.POSIXct(accidentes$FECHA_ACCIDENTE),
+                          format = "%H:%M:%S")
+```
+
+## Fecha de accidentes
+
+Esta base de datos cuenta con dos registros para la fecha, siendo la segunda la asociada al registro en Informe Policial de Accidentes de Tránsito, IPAT, pero con algunos inconvenientes, ya que al revisarla, se observa que todas ellas cuentan con un par de letras en medio de la hora y el día y al final de toda la fecha, lo cual dificulta el procesamiento de la base de datos y para la cual se va a realizar un mejoramiento para que conserve el formato adecuado.
+
+```{r}
+# Eliminación de los 0z
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = substring(FECHA_ACCIDENTES, 1, nchar(FECHA_ACCIDENTES)-5))
+```
+
+```{r}
+# Cambio de las T por un espacio
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = gsub("T", " ", FECHA_ACCIDENTES))
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA_ACCIDENTES = as.POSIXct(FECHA_ACCIDENTES))
+```
+
+```{r}
+accidentes$HORAS <- format(as.POSIXct(accidentes$FECHA_ACCIDENTES),
+                          format = "%H:%M:%S")
+```
+
+## Gravedad
+
+La variable gravedad se refiere al saldo que deja un incidente de tránsito en términos de si esta deja heridos o muertos, por ejemplo, lo que significa que esta es una variable categórica nominal, cuyos niveles de medición son los siguientes:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD_ACCIDENTE = as.factor(GRAVEDAD_ACCIDENTE))
+levels(accidentes$GRAVEDAD_ACCIDENTE)
+```
+Y como se observa, hay inconvenientes con una de ellas, ya que tiene errores en su codificación, lo cual obliga a que sea corregida, y al hacerlo, se obtienen los siguientes nuevos niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(GRAVEDAD_ACCIDENTE = recode(GRAVEDAD_ACCIDENTE,
+                           "Solo da\\xF1os" = "Solo daños"))
+levels(accidentes$GRAVEDAD_ACCIDENTE)
+```
+Lo que es correcto.
+
+## Mes
+
+El mes hace referencia, como se puede pensar, el mes del año en el que se dio el accidente. Como se ve a continuación, los niveles de medición de esta variable están dados en números, considerando que el primer mes del año, enero, se cataloga como "01", toda vez que el último, diciembre, se etiqueta como "12". Ahora bien, al final se va a hacer una revisión de las fechas para separar todos los componentes del día (día, mes y año), y para evitar confusiones, se va recodificar esta variable para que tenga el nombre completo de los meses.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(MES = as.factor(MES))
+levels(accidentes$MES)
+```
+Y al realizar la recodifación de esta variable, se tiene que los nueves niveles de medición son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(MES = recode(MES,
+                      "1" = "Enero",
+                      "2" = "Febero",
+                      "3" = "Marzo",
+                      "4" = "Abril",
+                      "5" = "Mayo",
+                      "6" = "Junio",
+                      "7" = "Julio",
+                      "8" = "Agosto", 
+                      "9" = "Septiembre",
+                      "10" = "Octubre",
+                      "11" = "Noviembre",
+                      "12" = "Diciembre"))
+levels(accidentes$MES)
+```
+
+Que es lo que se deseaba.
+
+## Número de radicado
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NRO_RADICADO = as.factor(NRO_RADICADO))
+unicos_rad <- length(unique(accidentes$NRO_RADICADO))
+levels(accidentes$NRO_RADICADO)[levels(accidentes$NRO_RADICADO) == ""] <- NA
+nas_rad <- sum(is.na(accidentes$NRO_RADICADO))
+```
+
+
+El número de radicado, parecido al expediente, corresponde a un código asociado a la ficha del informe del incidente de tránsito, por lo que nuevamente se espera que cada incidente registrado tenga un número de radicado único. Entonces, vale la pena comenzar mencionando que hay `r nas_rad` observaciones que carecen de número de radicado y que hay `r unicos_rad` números de radicos únicos, lo que significa que existen `r nrow(accidentes) - unicos_rad - nas_rad` radicados repetidos.
+
+```{r}
+repetidos_rad <- accidentes %>% 
+  group_by(NRO_RADICADO) %>% 
+  filter(n() > 1)
+```
+
+Entonces, al filtrar la base de datos para estudiar las duplicaciones en los números de radicados, se evidencia que no existen dos observaciones exactamente iguales, sino que difieran en la fecha y el barrio, por dar un par de ejemplos, de manera que no es necesario descartar observaciones por cuenta del número de radicado.
+
+## Número de columna
+
+Para estudiar esta variable, que por su definición es de tipo categórica nominal, se va observar primero cuáles son sus niveles:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = as.factor(NUMCOMUNA))
+levels(accidentes$NUMCOMUNA)
+```
+
+Y como se observa, existen problemas de unicidad, ya que las comunas que están etiquetadas con números del uno al nueve tienen dos versiones: una de dos dígitos (como "*02*") y otra de un solo dígito (como "*2*"), por lo cual se procede a realizar la corrección. Adicionalmente, los registros que no hacen referencia a ninguna comuna en particular serán recodificadas como *NA*s. Con esto, los nuevos niveles de medición de esta variable son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(NUMCOMUNA = recode(NUMCOMUNA,
+                            "01" = "1",
+                            "02" = "2",
+                            "03" = "3",
+                            "04" = "4",
+                            "05" = "5",
+                            "06" = "6",
+                            "07" = "7",
+                            "08" = "8",
+                            "09" = "9"))
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "0"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "AU"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "In"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "Sin Inf"] <- NA
+levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "SN"] <- NA
+levels(accidentes$NUMCOMUNA)
+```
+
+Que es lo que se desea.
+
+## Barrio
+
+Para los barrios, se tiene que los diferentes niveles de medición son los siguientes:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(BARRIO = as.factor(BARRIO))
+
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal manera que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden al barrio *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección, lo cual lleva a la siguiente tabla:
+
+```{r}
+# Corrección de barrios con códigos
+accidentes <- accidentes %>% 
+  mutate(BARRIO = recode(BARRIO,
+                         "0103" = "Popular",                              
+                          "0105" = "Moscú No. 2",
+                          "0109" = "Aldea Pablo VI",                                          
+                          "0202" = "Playón de los Comuneros",
+                          "0205" = "La Francia",                                          
+                          "0208" = "Villa Niza",
+                          "0211" = "La Rosa",                                          
+                          "0301" = "La Salle",
+                          "0302" = "Las Granjas",                                          
+                          "0303" = "Campo Valdés No. 2",
+                          "0304" = "Santa Inés",                                          
+                          "0306" = "El Pomar",
+                          "0307" = "Manrique Central No. 2",                                         
+                          "0309" = "Versalles No. 1",
+                          "0310" = "Versalles No. 2",                                         
+                          "0312" = "Oriente",
+                          "0402" = "San Isidro",                                         
+                          "0408" = "San Pedro",
+                          "0409" = "Manrique Central No. 1",                                         
+                          "0413" = "Aranjuez",
+                          "0505" = "Boyacá",                                         
+                          "0509" = "Girardot",
+                          "0514" = "Alfonso López",                                        
+                          "0606" = "San Martín de Porres",
+                          "0711" = "El Diamante",                                         
+                          "0712" = "Aures No. 2",
+                          "0716" = "Palenque",                                          
+                          "0717" = "Robledo",
+                          "0803" = "San Miguel",                                         
+                          "0809" = "Sucre",
+                          "0811" = "Trece de Noviembre",                                          
+                          "0813" = "Villatina",
+                          "0815" = "Las Estancias",                                         
+                          "0819" = "Villa Lilliam",
+                          "0903" = "Bomboná No. 2",                                         
+                          "0906" = "Barrio Caicedo",
+                          "0907" = "Buenos Aires",                                          
+                          "0912" = "El Salvador",
+                          "0914" = "Asomadera No. 1",                                         
+                          "1001" = "Prado",
+                          "1003" = "Jesús Nazareno",                                         
+                          "1004" = "El Chagualo",
+                          "1007" = "Guayaquil",                                         
+                          "1008" = "Corazón de Jesús",
+                          "1011" = "Calle Nueva",                                         
+                          "1012" = "Perpetuo Socorro",
+                          "1015" = "Bomboná No. 1",                                         
+                          "1018" = "Villa Nueva",
+                          "1019" = "La Candelaria",                                         
+                          "1020" = "San Diego",
+                          "1101" = "Carlos E. Restrepo",                                          
+                          "1102" = "Suramericana",
+                          "1103" = "Naranjal",                                         
+                          "1105" = "Los Conquistadores",
+                          "1108" = "Laureles",                                          
+                          "1114" = "Los Colores",
+                          "1202" = "Calasanz",                                          
+                          "1204" = "La América",
+                          "1205" = "La Floresta",                                         
+                          "1206" = "Santa Lucía",
+                          "1211" = "Simón Bolívar",                                         
+                          "1306" = "La Pradera",
+                          "1408" = "Altos del Poblado",                                         
+                          "1419" = "Manila",
+                          "1422" = "La Aguacatala",                                         
+                          "1423" = "Santa María de los Ángeles",
+                          "1503" = "Trinidad",                                         
+                          "1504" = "Santa Fe",
+                          "1507" = "Campo Amor",                                         
+                          "1510" = "Guayabal",
+                          "1511" = "La Colina",                                         
+                          "1603" = "Belén",
+                          "1605" = "San Bernardo",                                         
+                          "1611" = "Loma de los Bernal",
+                          "1612" = "La Gloria",                                         
+                          "1613" = "Altavista",
+                          "1620" = "El Nogal - Los Almendros",                                         
+                          "5002" = "La Frisola",
+                          "6001" = "La Loma",                                         
+                          "7001" = "Altavista Sector Central",
+                          "7002" = "Aguas Frías",                                         
+                          "9004" = "Santa Elena",
+                          "9086" = "Suburbano El Plan"))
+```
+
+```{r}
+# Corrección de barrios con problemas de codificación o unicidad
+accidentes <- accidentes %>% 
+  mutate(BARRIO = recode(BARRIO,
+                         "\\xC1rea de Expansi\\xF3n Altos de Calasanz" = "Área de expansión Altos de Calasanz",
+                         "\\xC1rea de Expansi\\xF3n Pajarito" = "Área de expansión Pajarito",
+                         "\\xC1rea de Expansi\\xF3n San Antonio de Prado" = "Área de expansión San Antonio de Prado",
+                          "Alejandr\\xEDa" = "Alejandría",
+                          "Alejandro Echavarr\\xEDa" = "Alejandro Echavarría",
+                          "Alfonso L\\xF3pez" = "Alfonso López",
+                          "Andaluc\\xEDa" = "Andalucía",
+                          "Antonio Nari\\xF1o" = "Antonio Nariño",
+                          "Area De Expansion Altavista" = "Área de expansión Altavista",
+                          "Área de Expansión Altavista" = "Área de expansión Altavista",                
+                          "Area de Expansion Altos de Calasanz" = "Área de expansión Altos de Calasanz",
+                          "Área de Expansión Altos de Calasanz" = "Área de expansión Altos de Calasanz",       
+                          "Area De Expansion Belen Rincon" = "Área de expansión Belén Rincón",
+                          "Área de Expansión Pajarito" = "Área de expansión Pajarito",              
+                          "Área de Expansión San Antonio de Prado" = "Área de expansión San Antonio de Prado",
+                          "Asomadera No.1" = "Asomadera No. 1",
+                          "Aguas frias" = "Aguas Frías",
+                          "Aguas Frias" = "Aguas Frías",
+                          "AUC2" = "Cabecera San Antonio de Prado",
+                          "AUC1" = "Cabecera Urbana San Cristóbal",
+                          "Aures No.1" = "Aures No. 1",
+                          "Aures No.2" = "Aures No. 2",                                 
+                          "B. Cerro  El Volador" = "Barrio Cerro El Volador",                          
+                          "B. Cerro El Volador" = "Barrio Cerro El Volador",
+                          "Barrio Col\\xF3n" = "Barrio Colón",                                                              
+                          "Barrio Crist\\xF3bal" = "Barrio Cristóbal",                           
+                          "Barrio de Jes\\xFAs" = "Barrio de Jesús",                               
+                          "Barrios de Jesús" = "Barrio de Jesús",
+                          "Batall\\xF3n Girardot" = "Batallón Girardot",                        
+                          "Bel\\xE9n" = "Belén",                                    
+                          "Belalc\\xE1zar" = "Belalcázar",                         
+                          "Berl\\xEDn" = "Berlín",
+                          "Berlin" = "Berlín",                                        
+                          "Bermejal-Los Alamos" = "Bermejal - Los Álamos",                                                              
+                          "Bombon\\xE1 No. 1" = "Bomboná No. 1",                             
+                          "Bombon\\xE1 No. 2" = "Bomboná No. 2",
+                          "Bombon\\xE1 No.1" = "Bomboná No. 1",                             
+                          "Bomboná No.1" = "Bomboná No. 1",
+                          "Boqueron" = "Boquerón",                
+                          "Boyac\\xE1" = "Boyacá",                                     
+                          "C\\xF3rdoba" = "Córdoba",                                  
+                          "Cabecera Urbana San Cristobal" = "Cabecera Urbana San Cristóbal",                                  
+                          "Campo Vald\\xE9s No. 1" = "Campo Valdés No. 1",
+                          "Campo Vald\\xE9s No. 2" = "Campo Valdés No. 2",                       
+                          "Campo Vald\\xE9s No.2" = "Campo Valdés No. 2",                            
+                          "Campo Valdés No.2" = "Campo Valdés No. 2",                                                                              
+                          "Catalu\\xF1a" = "Cataluña",                                                                                           
+                          "Coraz\\xF3n de Jes\\xFAs" = "Corazón de Jesús",
+                          "Diego Echavarr\\xEDa" = "Diego Echavarría",                         
+                          "Doce de Octubre No.1" = "Doce de Octubre No. 1",                     
+                          "Doce de Octubre No.2" = "Doce de Octubre No. 2",                                  
+                          "El Coraz\\xF3n" = "El Corazón",                                
+                          "El Corazon El Morro" = "El Corazón - El Morro",                                                           
+                          "El Nogal-Los Almendros" = "El Nogal - Los Almendros",                                    
+                          "El Progreso No.2" = "El Progreso No. 2",                       
+                          "El Rinc\\xF3n" = "El Rincón",                                
+                          "El Vel\\xF3dromo" = "El Velódromo",                             
+                          "Estaci\\xF3n Villa" = "Estación Villa",                         
+                          "F\\xE1tima" = "Fátima",                              
+                          "Facultad de Minas U. Nacional" = "Facultad de Minas U. Nacional",
+                          "H\\xE9ctor Abad G\\xF3mez" = "Héctor Abad Gómez",                    
+                          "Hospital San Vicente de Pa\\xFAl" = "Hospital San Vicente de Paúl",             
+                          "Jard\\xEDn Bot\\xE1nico" = "Jardín Botánico",                              
+                          "Jes\\xFAs Nazareno" = "Jesús Nazareno",                                 
+                          "La Am\\xE9rica" = "La América",
+                          "La Mansi\\xF3n" = "La Mansión",
+                          "La mota" = "La Mota",                                      
+                          "La Pi\\xF1uela" = "La Piñuela",                              
+                          "Las Lomas No.1" = "Las Lomas No. 1",                             
+                          "Las Lomas No.2" = "Las Lomas No. 2",
+                          "Los \\xC1ngeles" = "Los Ángeles",                          
+                          "Los Alc\\xE1zares" = "Los Alcázares",
+                          "Los Balsos No.1" = "Los Balsos No. 1",
+                          "Los Balsos No.2" = "Los Balsos No. 2",                          
+                          "Manrique Central No.1" = "Manrique Central No. 1",
+                          "Manrique Central No.2" = "Manrique Central No. 2",                       
+                          "Mar\\xEDa Cano Carambolas" = "María Cano Carambolas",                    
+                          "Mosc\\xFA No. 1" = "Moscú No. 1",                               
+                          "Mosc\\xFA No. 2" = "Moscú No. 2",
+                          "Mosc\\xFA No.2" = "Moscú No. 2",                              
+                          "Moscú No.1" = "Moscú No. 1",                                   
+                          "Moscú No.2" = "Moscú No. 2",
+                          "Nueva Villa de Aburr\\xE1" = "Nueva Villa de Aburrá",                   
+                          "Nueva Villa de la Iguan\\xE1" = "Nueva Villa de la Iguaná",                 
+                          "Nueva Villa de La Iguaná" = "Nueva Villa de la Iguaná",                     
+                          "Play\\xF3n de Los Comuneros" = "Playón de los Comuneros",                  
+                          "San Germ\\xE1n" = "San Germán",                              
+                          "San Javier No.1" = "San Javier No. 1",                            
+                          "San Javier No.2" = "San Javier No. 2",
+                          "San Joaqu\\xEDn" = "San Joaquín",                              
+                          "San Jos\\xE9 de la Monta\\xF1a" = "San José de la Montaña",              
+                          "San Jos\\xE9 la Cima No. 1" = "San José de la Cima No. 1",
+                          "San Jos\\xE9 la Cima No.2" = "San José de la Cima No. 2",                     
+                          "San Jose Del Manzanillo" = "San José del Manzanillo",                     
+                          "San José la Cima No. 1" = "San José de la Cima No. 1",
+                          "San José la Cima No.2" = "San José de la Cima No. 2",                       
+                          "San Mart\\xEDn de Porres" = "San Martín de Porres",                     
+                          "Santa F\\xE9" = "Santa Fe",                                
+                          "Santa Fé" = "Santa Fe",
+                          "Santa In\\xE9s" = "Santa Inés",                              
+                          "Santa Luc\\xEDa" = "Santa Lucía",
+                          "Santa M\\xF3nica" = "Santa Mónica",                              
+                          "Santa Mar\\xEDa de los \\xC1ngeles" = "Santa María de los Ángeles",
+                          "Santa Mar\\xEDa de Los \\xC1ngeles" = "Santa María de los Ángeles",           
+                          "Santa María de Los Ángeles" = "Santa María de los Ángeles",                    
+                          "Santo Domingo Savio No.1" = "Santo Domingo Savio No. 1",                                       
+                          "Sim\\xF3n Bol\\xEDvar" = "Simón Bolívar",
+                          "SUBURB El Plan" = "Suburbano El Plan",                                
+                          "Suburbano el Tesoro" = "Suburbano El Tesoro",                           
+                          "Suburbano La Palma-El Patio" = "Suburbano La Palma - El Patio",
+                          "Suburbano Pedregal alto" = "Suburbano Pedregal Alto",
+                          "U.D. Atanasio Girardot" = "Unidad Deportiva Atanasio Girardot",
+                          "Versalles No.1" = "Versalles No. 1",                              
+                          "Versalles No.2" = "Versalles No. 2",
+                          "L\\xF3pez de Mesa" = "López de Mesa",
+                          "La Loma De Los Bernal" = "Loma de los Bernal",
+                          "La Loma de Los Bernal" = "Loma de los Bernal",
+                          "Maria Cano Carambolas" = "María Cano Carambolas",
+                          "Piedras Blancas - Matasano" = "Piedras Blancas",
+                          "Playón de Los Comuneros" = "Playón de los Comuneros",
+                          "Santa Elena" = "Santa Elena Sector Central",
+                          "Suburbano Aguas Frias" = "Suburbano Aguas Frías",
+                          "Suburbano Palma Patio" = "Suburbano La Palma - El Patio",
+                          "Suburbano La Palma-El Patio" = "Suburbano La Palma - El Patio",
+                          "Suburbano Travesias" = "Suburbano Travesías",
+                          "Villa Liliam" = "Villa Lilliam"))
+```
+
+```{r}
+# NA para barrios sin información
+
+accidentes$BARRIO[accidentes$BARRIO == "Sin Inf"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Sin Nombre"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == ""] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "Inst"] <- NA
+accidentes$BARRIO[accidentes$BARRIO == "0"] <- NA
+```
+
+```{r}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+## Comuna
+
+La comuna describe el nombre completo de la comuna en la que se dio el incidente vial observado, por lo que se puede concluir que es una variable categórica nominal, cuyos niveles de medición son:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(COMUNA = as.factor(COMUNA))
+levels(accidentes$COMUNA)
+```
+
+Y como se observa, existen varios problemas de unicidad o de codificación, los cuales van a ser corregidos. Además, los accidentes de tránsito que carecen de registro asociado a la comuna serán codificados como *NA*s. Con esto en mente, se van a revisar nuevamente los niveles de medición:
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(COMUNA = recode(COMUNA,
+                         "Bel\\xE9n" = "Belén",
+                         "Corregimiento de San Crist\\xF3bal" = "Corregimiento de San Cristóbal",
+                         "Corregimiento de San Sebasti\\xE1n de Palmitas" = "Corregimiento de San Sebastián de Palmitas",
+                         "La Am\\xE9rica" = "La América"))
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "SN"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "Sin Inf"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "In"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "0"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == "AU"] <- NA
+levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == ""] <- NA
+levels(accidentes$COMUNA)
+```
+
+Y como se observa, es adecuado.
+
+## Ubicaciones geográficas
+
+El caso de las ubicaciones geográficas es especial porque, de acuerdo con la documentación de esta base de datos, las coordenadas de longitud y latitud del accidente registrado se encuentran separadas en dos variables distintas: X y Y, sin embargo, en la base de datos que realmente se obtiene, estas dos están fusionadas en una sola, lo cual probablemente es lo que dio lugar al desfase en los nombres de las columnas, por lo cual, se procede a su separación.
+
+```{r}
+accidentes[c("LONGITUD", "LATITUD")] <- str_split_fixed(accidentes$LOCATION, ", ", 2)
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(LONGITUD = gsub("\\[|\\}", "", LONGITUD)) %>% 
+  mutate(LATITUD = gsub("\\]|\\}", "", LATITUD))
+
+options(digits = 15)
+accidentes <- accidentes %>% 
+  mutate(LONGITUD = as.numeric(LONGITUD)) %>% 
+  mutate(LATITUD = as.numeric(LATITUD))
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  rename(X_MAGNA = X) %>% 
+  rename(Y_MAGNA = Y)
+```
+
+
+```{r}
+write.csv(accidentes,"accidentesMDE.csv")
+save(accidentes, file = "accidentesMDE.RData")
+```
+
+```{r}
+rm(list = ls())
+```
+
+# Imputación de barrios
+
+Hay un poco más de veinte mil observaciones que no tienen asignado un barrio, de manera que para imputarlos, se utilizó el algoritmo KNN utilizando las observaciones que sí tenían barrio para entrenar y validar el modelo. El conjunto de entrada X son las observaciones respecto a las variables AÑO, CLASE ACCIDENTE, COMUNA, HORA, LONGITUD Y LATITUD; y el conjunto de salida corresponde a los barrios de dichas observaciones. Luego de entrenar y evaluar el modelo, se realiza la predicción utilizando las observaciones que no tienen barrio y de esta manera se imputan los barrios. Para más detalle visitar el archivo "imputación_de_barrios.py".
+
+```{r include=FALSE}
+library("reticulate")
+library("DT")
+library("kableExtra")
+library("tidyverse")
+library("knitr")
+library("sqldf")
+```
+
+```{r include=FALSE}
+py_install("pandas")
+py_install("numpy")
+py_install("scikit-learn")
+```
+
+```{r include=FALSE}
+source_python('C:\\Users\\lenovo\\Documents\\TAE\\TAE_Accidentalidad\\BD_nueva\\imputación_de_barrios_en_python2.py')
+accidentes <- lecturaDatos("accidentesMDE.csv")
+accidentes_con_barrio <- accidentesConBarrio(accidentes)
+barrios_pred <- prediccionDeBarrios(accidentes_con_barrio,accidentes)
+imputacionBarrios(barrios_pred,accidentes)
+```
+
+```{r include=FALSE}
+accidentes <-read.csv("accidentesConBarrio3_1.csv", header = TRUE, sep = ",", dec = ".", encoding = "UTF-8")
+```
+
+```{r include=FALSE}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+```
+
+
+```{r echo = FALSE, warning = FALSE}
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+En la tabla anterior se puede ver que ya no existe algún barrio vacío por lo que la imputación fue un éxito.
+
+```{r}
+rm(list = ls())
+```
+
+# Transformaciones finales
+
+# Introducción
+
+Una vez se ha hecho la depuración de la base de datos y se han realizado las imputaciones, fundementalmente en los barrios, se puede proceder con las transformaciones finales de la tabla de datos de cara al estudio de los diferentes modelos predictivos que van a ser abordados para poder proyectar la accidentalidad en la ciudad de Medellín durante los años 2020 y 2021.
+
+## Simplificación de columnas
+
+Para comenzar, se van a eliminar las columnas relacionadas con datos administrativos, como lo son el CBML, la dirección y la dirección encasillada, el número de radicado, el número de la comuna, el expediente y la fecha de accidente secundaria. La justificación de la eliminación de esta última columna se basa en que, al revisar las observaciones, se evidencia que la hora asociada está seis o cinco horas más tarde y generalmente en horarios nocturnos en los que la circulación vehicular es muy reducida en la ciudad, lo que lleva a pensar que el huso horario de esta variable está en la hora de Londres (*Greenwich Meridian Time*, ***GMT***), toda vez que la primera fecha y hora reportadas presentan un huso horario adecuado y coherente con los horarios y hábitos de la ciudadanía en Medellín, cuyos picos de circulación se dan entre las [8:00 am y las 6.00 pm](http://www.scielo.org.co/scielo.php?script=sci_arttext&pid=S0012-73532011000100011#:~:text=Con%20esta%20información%20de%20los,y%20las%2018%3A00%20horas.)
+
+```{r}
+# Eliminación de datos administrativos
+accidentes <- accidentes %>%
+  select(-c("DIRECCION", "EXPEDIENTE", "NRO_RADICADO", "NUMCOMUNA",
+            "DIRECCION.ENCASILLADA", "FECHA_ACCIDENTES", "HORAS", "LOCATION"))
+```
+
+```{r}
+# Reubicación
+accidentes <- accidentes %>% 
+  relocate(FECHA_ACCIDENTE, .before = CLASE_ACCIDENTE) %>% 
+  relocate(MES, .before = CLASE_ACCIDENTE) %>% 
+  relocate(FECHA_ACCIDENTE, .before = AÑO) %>% 
+  relocate(MES, .before = CLASE_ACCIDENTE) %>% 
+  relocate(FECHA, .before = CLASE_ACCIDENTE) %>% 
+  relocate(HORA, .before = CLASE_ACCIDENTE)
+```
+
+
+## Comuna
+
+Como se vio al finalizar el primer proceso de depuración, habían varias decenas de barrios en la base de datos desconocidos, y para no dejar sus campos vacíos ni descartarlos para el modelo predictivo se realizó un proceso de imputación usando el método de los vecinos más cercanos, lo cual puede generar algunas diferencias entre el barrio y su comuna en tanto en algunas observaciones el barrio era desconocido pero no su columna, por lo que se debe proceder a la modifación de las columnas para que estos valores coincidan.
+
+```{r}
+# Vectores con los barrios para cada comuna y corregimiento de Medellín
+
+## Comuna No. 01 - El Popular
+
+com01 <- c("Aldea Pablo VI", "Carpinelo", "El Compromiso", "Granizal",
+           "La Avanzada", "La Esperanza No. 2", "Moscú No. 2", "Popular",
+           "Santo Domingo Savio No. 1", "Santo Domingo Savio No. 2",
+           "San Pablo", "Villa Guadalupe")
+
+## Comuna No. 02 - Santa Cruz
+
+com02 <- c("Santa Cruz", "La Isla", "Playón de los Comuneros", "Pablo VI",
+           "La Frontera", "La Francia", "Andalucía", "Villa del Socorro",
+           "Villa Niza", "Moscú No. 1", "La Rosa")
+
+## Comuna No. 03 - Manrique
+
+com03 <- c("La Salle", "Las Granjas", "Campo Valdés No. 2", "Santa Inés",
+           "El Raizal", "El Pomar", "Manrique Central No. 2", "Manrique Oriental",
+           "Versalles No. 1", "Versalles No. 2", "La Cruz", "La Honda",
+           "Oriente", "María Cano Carambolas", "San José de la Cima No. 1",
+           "San José de la Cima No. 2")
+
+## Comuna No. 04 - Aranjuez
+
+com04 <- c("Aranjuez", "Berlín", "San Isidro", "Palermo", "Bermejal - Los Álamos",
+           "Moravia", "Sevilla", "San Pedro", "Manrique Central No. 1",
+           "Campo Valdés No. 1", "Las Esmeraldas", "La Piñuela", "Brasilia",
+           "Miranda", "Jardín Botánico", "Universidad de Antioquia",
+           "Parque Norte")
+
+## Comuna No. 05 - Castilla
+
+com05 <- c("Castilla", "Toscana", "Héctor Abad Gómez", "Las Brisas", "Florencia",
+           "Tejelo", "Boyacá", "Belalcázar", "Girardot", "Tricentenario",
+           "Francisco Antonio Zea", "Alfonso López", "Caribe", "El Progreso",
+           "Plaza de Ferias", "Cementerio Universal", "Oleoducto",
+           "Terminal de Transporte")
+
+## Comuna No. 06 - Doce de Octubre
+
+com06 <- c("Doce de Octubre No. 1", "Doce de Octubre No. 2", "Santander",
+           "Pedregal", "La Esperanza", "San Martín de Porres", "Kennedy",
+           "Picacho", "Picachito", "Mirador del Doce", "El Progreso No. 2",
+           "El Triunfo")
+
+## Comuna No. 07 - Robledo
+
+com07 <- c("Robledo", "Barrio Cerro El Volador", "San Germán", "Facultad de Minas U. Nacional",
+           "La Pilarica", "Bosques de San Pablo", "Altamira", "Córdoba",
+           "López de Mesa", "El Diamante", "Aures No. 1", "Aures No. 2",
+           "Bello Horizonte", "Villa Flora", "Palenque", "Cucaracho",
+           "Fuente Clara", "Santa Margarita", "Olaya Herrera", "Pajarito",
+           "Monteclaro", "Nueva Villa de la Iguaná", "La Cuchilla",
+           "La Aurora", "La Campiña", "Universidad Nacional",
+           "Facultad Veterinaria y Zootecnia U.de.A.")
+
+## Comuna No. 08 - Villa Hermosa
+
+com08 <- c("Villa Hermosa", "La Mansión", "Llanaditas", "La Ladera",
+           "Golondrinas", "Batallón Girardot", "San Miguel", "Los Mangos",
+           "Sucre", "El Pinal", "Trece de Noviembre", "La Libertad",
+           "Villatina", "San Antonio", "Las Estancias", "Villa Turbay",
+           "La Sierra", "Villa Lilliam", "Esfuerzos de Paz No. 1",
+           "Esfuerzos de Paz No. 2", "Enciso")
+
+## Comuna No. 09 - Buenos Aires
+
+com09 <- c("Buenos Aires", "Barrio Caicedo", "Juan Pablo II", "Ocho de Marzo",
+           "Barrio de Jesús", "Bomboná No. 2", "Los Cerros El Vergel",
+           "Alejandro Echavarría", "Miraflores", "Cataluña", "La Milagrosa",
+           "Gerona", "El Salvador", "Loreto", "Asomadera No. 1", "Asomadera No. 2",
+           "Asomadera No. 3", "Quinta Linda")
+
+## Comuna No. 10 - La Candelaria
+
+com10 <- c("La Candelaria", "Prado", "Jesús Nazareno", "El Chagualo",
+           "Estación Villa", "San Benito", "Guayaquil", "Corazón de Jesús",
+           "Calle Nueva", "Perpetuo Socorro", "Barrio Colón", "Las Palmas",
+           "Bomboná No. 1", "Boston", "Los Ángeles", "Villa Nueva",
+           "San Diego", "Centro Administrativo", "La Alpujarra",
+           "Hospital San Vicente de Paúl")
+
+## Comuna No. 11 - Laureles - Estadios
+
+com11 <- c("Los Conquistadores", "Laureles", "Carlos E. Restrepo",
+           "Suramericana", "Naranjal", "San Joaquín", "Bolivariana",
+           "Las Acacias", "La Castellana", "Lorena", "El Velódromo",
+           "El Estadio", "Los Colores", "Cuarta Brigada", "Florida Nueva",
+           "U.P.B.", "Unidad Deportiva Atanasio Girardot")
+
+## Comuna No. 12 - La América
+
+com12 <- c("La América", "Ferrini", "Calasanz", "Los Pinos", "La Floresta",
+           "Santa Lucía", "El Danubio", "Campo Alegre", "Santa Mónica",
+           "Barrio Cristóbal", "Simón Bolívar", "Santa Teresita",
+           "Calasanz Parte Alta")
+
+## Comuna No. 13 - San Javier
+
+com13 <- c("San Javier No. 1", "San Javier No. 2", "El Pesebre", "Blanquizal",
+           "Santa Rosa de Lima", "Los Alcázares", "Metropolitano", "La Pradera",
+           "Juan XXIII La Quiebra", "La Divisa", "Veinte de Julio", "Belencito", "Betania",
+           "El Corazón", "Las Independencias", "Nuevos Conquistadores",
+           "El Salado", "Eduardo Santos", "Peñitas", "Antonio Nariño",
+           "El Socorro", "Calasania", "La Asomadera")
+
+## Comuna No. 14 - El Poblado
+
+com14 <- c("Castropol", "Barrio Colombia", "Villa Carlota", "Lalinde",
+           "Manila", "Las Lomas No. 1", "Las Lomas No. 2", "Altos del Poblado",
+           "El Tesoro", "Los Naranjos", "Los Balsos No. 1",
+           "Los Balsos No. 2", "San Lucas", "El Diamante No. 2", "El Castillo",
+           "Alejandría", "La Florida", "El Poblado", "Astorga", "Patio Bonito",
+           "La Aguacatala", "Santa María de los Ángeles")
+
+## Comuna No. 15 - Guayabal
+
+com15 <- c("Tenche", "Trinidad", "Santa Fe", "Campo Amor", "Cristo Rey",
+           "Guayabal", "La Colina", "El Rodeo", "Parque Juan Pablo II")
+
+## Comuna No. 16 - Guayabal 
+
+com16 <- c("Belén", "Rodeo Alto", "Aguas Frías", "Cerro Nutibara", "Fátima",
+           "Rosales", "Granada", "San Bernardo", "Las Playas", "Diego Echavarría",
+           "La Mota", "El Rincón", "La Hondonada", "Loma de los Bernal",
+           "La Gloria", "Altavista", "La Palma", "Zafra", "Los Alpes",
+           "Las Violetas", "Las Mercedes", "Nueva Villa de Aburrá", "Miravalle",
+           "El Nogal - Los Almendros")
+
+## Corregimiento No. 50 - Palmitas
+
+com50 <- c("La Aldea", "Suburbano Palmitas", "La Frisola", "Volcana Guayabal",
+           "Palmitas Sector Central", "La Suiza", "Potrera Miserenga",
+           "Suburbano La Aldea", "La Urquita", "Suburbano Potreta Miserenga",
+           "Suburbano Urquita")
+
+## Corregimiento No. 60 - San Cristóbal
+
+com60 <- c("Boquerón", "Suburbano El Llano", "Cabecera Urbana San Cristóbal",
+           "Suburbano La Palma - El Patio", "La Loma", "Área de expansión Altos de Calasanz",
+           "Travesías", "Pedregal Alto", "El Llano", "Pajarito", "La Loma Oriental", "Naranjal",
+           "El Uvito", "Las Playas", "Suburbano Travesías", "Suburbano La Loma", "Pedregal Bajo",
+           "La Palma - El Patio", "Área de expansión Pajarito", "Suburbano La Cuchilla", "El Carmelo",
+           "Yolombo", "San José de la Montaña", "El Picacho", "La Cuchilla", "Suburbano Pedregal Alto",
+           "AUC1", "AUC2")
+
+## Corregimiento No. 70 - Altavista
+
+com70 <- c("Altavista Sector Central", "Área de expansión Altavista", "Aguas Frías",
+           "Área de expansión El Noral", "San Pablo", "El Corazón - El Morro",
+           "Área de expansión Belén Rincón", "San José del Manzanillo", "Suburbano Aguas Frías",
+           "La Esperanza", "Buga Patio Bonito", "Suburbano Altavista")
+
+## Corregimiento No. 80 - San Antonio de Prado
+
+com80 <-  c("La Florida", "Área de expansión San Antonio de Prado",
+            "Suburbano Potrerito", "La Verde", "El Astillero", "El Salado",
+            "Potrerito", "Yarumalito", "Cabecera San Antonio de Prado",
+            "La Oculta", "El Vergel")
+
+## Corregimiento No. 90 - Santa Elena
+
+com90 <- c("Piedra Gorda", "Suburbano Matasano No. 1", "Suburbano Piedra Gorda",
+           "Piedras Blancas Represa", "Santa Elena Sector Central", "Barro Blanco",
+           "Suburbano El Placer", "El Placer", "Suburbano Santa Elena Central",
+           "Suburbano El Cerro", "El Plan", "El Cerro", "Suburbano Barro Blanco",
+           "Media Luna", "Suburbano El Llano", "Suburbano Chacaltaya", "Suburbano Matasano No. 2",
+           "Piedras Blancas", "Suburbano El Plan", "Suburbano El Tesoro",
+           "Suburbano Matasano No. 3", "El Llano SE", "Suburbano Mirador del Poblado")
+
+## Medellín
+
+MDE <- c(com01, com02, com03, com04, com05, com06, com07, com08, com09, com10,
+         com11, com12, com13, com14, com15, com16, com50, com60, com70, com80,
+         com90)
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(COMUNASMOD = ifelse(BARRIO %in% com01, "Popular",
+                      ifelse(BARRIO %in% com02, "Santa Cruz",
+                      ifelse(BARRIO %in% com03, "Santa Manrique",
+                      ifelse(BARRIO %in% com04, "Aranjuez",
+                      ifelse(BARRIO %in% com05, "Castilla",
+                      ifelse(BARRIO %in% com06, "Doce de Octubre",
+                      ifelse(BARRIO %in% com07, "Robledo",
+                      ifelse(BARRIO %in% com08, "Villa Hermosa",
+                      ifelse(BARRIO %in% com09, "Buenos Aires",
+                      ifelse(BARRIO %in% com10, "La Candelaria",
+                      ifelse(BARRIO %in% com11, "Laureles - Estadio",
+                      ifelse(BARRIO %in% com12, "La América",
+                      ifelse(BARRIO %in% com13, "San Javier",
+                      ifelse(BARRIO %in% com14, "El Poblado",
+                      ifelse(BARRIO %in% com15, "Guayabal",
+                      ifelse(BARRIO %in% com16, "Belén",
+                      ifelse(BARRIO %in% com50, "San Sebastián de Palmitas",
+                      ifelse(BARRIO %in% com60, "San Cristóbal",
+                      ifelse(BARRIO %in% com70, "Altavista",
+                      ifelse(BARRIO %in% com80, "San Antonio de Prado",
+                      ifelse(BARRIO %in% com90, "Santa Elena",
+                             "NA"))))))))))))))))))))))
+```
+
+```{r}
+problemas <- accidentes %>% 
+  filter(COMUNASMOD == NA | COMUNASMOD == "" | COMUNASMOD == "x") %>% 
+  group_by(BARRIO) %>% 
+  summarise(TOTAL = n())
+```
+
+
+
+## Fecha y fechas especial.
+
+Ahora bien, la variable que relaciona la fecha en la que el incidente vial ocurrió es de suma importancia ya que lo que se quiere predecir es precisamente la cantidad y tipo de accidentes que ocurren en la ciudad de Medellín en el 2020 y el 2021 a partir de la información anterior, y para poder facilitar esto se va a a extraer información importante de las fechas registradas, como el día, el mes, el año, el número de la semana y el día de la semana en la que se dio el accidente. Adicionalmente, se van a crear varias variables binarias que van a identificar qué accidentes se dieron en fechas que cumplen las siguientes características.
+
+- **Festivo.** Los días festivos son de importancia ya que en ellos se dan operaciones de retorno de miles de ciudadanos que previamente salieron de la ciudad hacia otros municipios de la región y el país, lo cual podría explicar varios accidentes registrados en la base de datos. También se agregan a nochebuena (24 de diciembre de cada año) y nochevieja (31 de diciembre de cada año).
+- **Feria de flores.** La feria de flores es el evento más icónico de la ciudad de Medellín y uno de los más reconocidos de Colombia, lo cual podría estimular el uso de vehículos para asistir a diferentes eventos de esta feria, así como el tránsito de más personas que llegan de otros lugares del país o del mundo para participar en las actividades de la feria de flores.
+- **Final de fútbol.** La ciudad de Medellín tiene dos equipos de fútbol: el Atlético Nacional y el Deportivo Independiente Medellín, los cuales han participado en varias finales de la categoría A del torneo de fútbol nacional, por lo que es conveniente considerarla ya que por la movilización de miles de personas que desean reunirse con familiares y amigos para disfrutar de la cita deportiva juntos podría explicar una alta cantidad de accidentes.
+- **Quincena.** Se incluyen las quincenas tradicionales, que son el quince y el treinta de cada mes, así como el primero, ya que algunas empresas tienen esquema primero - quince, y también a los días cinco y al veinte de cada mes, puesto que otras empresas y sobre todo la administración pública paga a sus empleados dichos días.
+
+Adicionalmente, para facilitar la manipulación de las fechas, se generan a partir de la fecha reportada en el IPAT las siguientes columnas:
+
+- **Día modificado.** Componente del día de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Mes modificado.** Componente del mes de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Año modificado.** Componente del año de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Semana modificada uno.** Número de la semana en el año en la que se dio un accidente de tránsito observado, teniendo en cuenta que la primera semana va del primero a siete de enero, la segunda va del ocho al catorce de enero y así sucesivamente sin considerar el día de la semana asociada a cada día.
+- **Semana modificada dos.** Número de la semana del año en la que se dio un accidente de tránsito observado considerando el día en el que comienza el año. Así, si un año comienza el día sabado, entonces el primero y el segundo de enero son la primera semana, pero el tres de enero, siendo lunes, registra una nueva semana, que en este caso es la segunda, y así sucesivamente.
+- **Día semana.** Nombre del día de la semana en la que se dio un accidente de tránsito observado.
+- **Mes semana.** Mes en el que se dio un accidente de tránsito según la fecha formalmente registrada en el IPAT.
+- **Festivo.** Identificación de días asociados a festivos.
+- **Flores.** Identificación de días asociados a la celebración de la Feria de las Flores en la ciudad.
+- **Fútbol.** Identificación de días en los que algún equipo local de fútbol participó en una final de fútbol de la categoría primera del país.
+- **Quincena.** Identificación de días en los que las empresas y las instituciones públicas y privadas pagan a sus empleados formalos sus quincenas.
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(FECHA = as.Date(FECHA_ACCIDENTE)) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) 
+```
+
+```{r}
+# Festivos
+fest14 <- c("2014-01-01", "2014-01-06", "2014-03-24",
+                "2014-04-17", "2014-04-18", "2014-05-01",
+	            	"2014-06-02", "2014-06-23", "2014-06-30",
+            		"2014-07-20", "2014-08-07", "2014-08-18",
+            		"2014-10-13", "2014-11-03", "2014-11-17",
+            		"2014-12-08", "2014-12-25")
+
+fest15 <- c("2015-01-01", "2015-01-12", "2015-03-23",
+            "2015-04-02", "2015-04-03", "2015-05-01",
+        		"2015-06-08", "2015-06-15", "2015-06-29",
+        		"2015-07-20", "2015-08-07", "2015-08-17",
+        		"2015-10-12", "2015-11-02", "2015-11-16",
+        		"2015-12-08", "2015-12-25", "2015-05-18")
+
+fest16 <- c("2016-01-01", "2016-01-11", "2016-03-21",
+            "2016-03-24", "2016-03-25", "2016-05-01",
+        		"2016-05-30", "2016-06-06", "2016-07-04",
+        		"2016-07-20", "2016-08-07", "2016-08-15",
+        		"2016-10-17", "2016-11-07", "2016-11-14",
+        		"2016-12-08", "2016-12-25", "2016-05-09")
+
+fest17 <- c("2017-01-01", "2017-01-09", "2017-03-20",
+                "2017-04-13", "2017-04-14", "2017-05-01",
+		"2017-05-29", "2017-06-19", "2017-07-03",
+		"2017-07-20", "2017-08-07", "2017-08-21",
+		"2017-10-16", "2017-11-06", "2017-11-13",
+		"2017-12-08", "2017-12-25", "2017-06-26")
+
+fest18 <- c("2018-01-01", "2018-01-08", "2018-03-19",
+            "2018-03-19", "2018-03-30", "2018-05-01",
+        		"2018-05-14", "2018-06-04", "2018-07-02",
+        		"2018-07-20", "2018-08-07", "2018-08-20",
+        		"2018-10-15", "2018-11-05", "2018-11-12",
+        		"2018-12-08", "2018-12-25", "2018-06-11")
+
+fest19 <- c("2019-01-01", "2019-01-07", "2019-03-25",
+            "2019-04-19", "2019-04-18", "2019-05-01",
+        		"2019-06-03", "2019-06-24", "2019-07-01",
+        		"2019-07-20", "2019-08-07", "2019-08-19",
+        		"2019-10-14", "2019-11-04", "2019-11-11",
+        		"2019-12-08", "2019-12-25")
+
+fest20 <- c("2020-01-01", "2020-01-06", "2020-03-23",
+            "2020-04-10", "2020-04-09", "2020-05-01",
+        		"2020-06-15", "2020-06-22", "2020-06-29",
+        		"2020-07-20", "2020-08-07", "2020-08-17",
+        		"2020-10-12", "2020-11-02", "2020-11-16",
+        		"2020-12-08", "2020-12-25", "2020-05-25")
+
+festivos <- c(fest14,fest15,fest15,fest16,fest17,fest18,fest19,fest20)
+
+festivos <- as.Date(festivos)
+
+accidentes <- accidentes %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0))
+```
+
+```{r}
+# Feria de Flores
+
+#2014
+ff14 <- seq(as.Date("2014-08-01"), by = "day", length.out = 10)
+
+#2015
+ff15 <- seq(as.Date("2015-07-31"), by = "day", length.out = 10)
+
+#2016
+ff16 <- seq(as.Date("2016-07-29"), by = "day", length.out = 10)
+
+#2017
+ff17 <- seq(as.Date("2017-07-28"), by = "day", length.out = 10)
+
+#2018
+ff18 <- seq(as.Date("2018-08-03"), by = "day", length.out = 10)
+
+#2019
+ff19 <- seq(as.Date("2015-08-02"), by = "day", length.out = 10)
+
+#2020
+ff20 <- seq(as.Date("2020-11-01"), by = "day", length.out = 8)
+
+#2021
+ff21 <- seq(as.Date("2021-08-12"), by = "day", length.out = 8)
+
+ff <- c(ff14, ff15, ff16, ff17, ff18, ff19, ff20, ff21)
+
+accidentes <- accidentes %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0))
+```
+
+```{r}
+# Fútbol
+futbol <- c("2014-12-17", "2014-12-17",
+            "2015-06-07", "2015-06-03",
+            "2015-12-16", "2015-12-20",
+            "2016-06-15", "2016-06-19",
+            "2017-06-14", "2017-06-18",
+            "2018-06-06", "2018-06-09",
+            "2018-12-13", "2018-12-17",
+            "2016-01-23", "2016-01-27",
+            "2017-01-21", "2017-01-29",
+            "2018-01-31", "2019-02-07")
+
+futbol <- as.Date(futbol)
+
+accidentes <- accidentes %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0))
+```
+
+```{r}
+# Quincena
+quincena <- c("5", "15", "20", "30", "1")
+
+accidentes <- accidentes %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+```
+
+## Tipo de accidente por fecha
+
+Finalmente, para facilitar el estudio de los diferentes tipos de accidente y del diseño de vías, se generan unas bases de datos que agrupan el tipo de accidente sucedido sumando las observaciones que tienen en común aspectos como la fecha, el diseño de la vía o el barrio.
+
+```{r, message = FALSE}
+accFechaAcc <- accidentes %>% 
+  group_by(FECHA, CLASE_ACCIDENTE) %>% 
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+```
+
+```{r, message = FALSE}
+accFechaDis <- accidentes %>%  
+  group_by(FECHA, DISEÑO) %>% 
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+```
+```{r, message = FALSE}
+accFechaDisAcc <- accidentes %>%  
+  group_by(FECHA, DISEÑO, CLASE_ACCIDENTE) %>% 
+  summarise(ACCIDENTES = n()) %>% 
+  mutate(DIAX = day(FECHA)) %>% 
+  mutate(MESX = month(FECHA)) %>% 
+  mutate(AÑOX = year(FECHA)) %>% 
+  mutate(SEMANAX = week(FECHA)) %>% # 1-7, 8-14,...
+  mutate(SEMANAXX = strftime(FECHA, format = "%V")) %>% # Semana del año sin importar inicio
+  mutate(DIA_SEMANA = weekdays(FECHA)) %>% 
+  mutate(MES_SEMANA = months(FECHA)) %>% 
+  mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
+  mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
+  mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+```
+```{r}
+save(accidentes, file = "accidentesMDE2.RData")
+save(accFechaDis, file = "accFechaDiseno.RData")
+save(accFechaAcc, file = "accFechaTipo.RData")
+save(accFechaDisAcc, file = "accFechaDisenoTipo.RData")
+write.csv(accidentes, file = "accidentesMDE2.csv")
+```
+
+```{r}
+rm(list = ls())
+```
+
+# Análisis descriptivo
+
+# Breve introducción
+
+En este documento se abordará una breve descripción relaciondada con la base de datos sobre la accidentalidad vehicular en la ciudad de Medellín entre los años 2014 y 2020, haciéndo énfasis en las variables más relevantes de esta base de datos como lo son la fecha de ocurrencia, las comunas y los barrios en los que se dan los incidentes y el tipo de accidentalidad sucedida, entre otros. Esto con el propósito de tener un acercamiento inicial a esta base de datos como parte del primer proyecto del curso de ***Técnicas de Aprendizaje Estadístico*** del semestre 2021-2 de la Universidad Nacional de Colombia, sede Medellín.
+
+```{r Lectura de paquetes, include = FALSE}
+library("tidyverse")
+library("kableExtra")
+library("plotly")
+library("summarytools")
+library("DT")
+library("iClick")
+library("lubridate")
+library("formattable")
+library("nortest")
+```
+
+```{r Lectura de la base de datos}
+load("accidentesMDE2.RData")
+```
+
+```{r}
+glimpse(accidentes)
+```
+
+# Descripción general de la base de datos
+
+La base de datos de accidentalidad de Medellín recoge todos los accidentes que sucedieron en la ciudad de Medellín, Antioquia (Colombia) entre el lunes 14 de julio de 2014 y el lunes 31 de agosto de 2020, recogiendo algunos aspectos de cada uno de estos incidentes viales como la clase de accidente observado, la dirección en la que ocurrió, el código del expediente y su número de radicado, la fecha y hora y la ubicación en coordenadas geográficas. En general, las variables a considerar por esta base de datos son las siguientes:
+
+- **Fecha del accidente.** Fecha en la que sucedió el incidente de tránsito según el Informe Policial de Accidentes de Tránsito, IPAT, en el formato YYYY-MM-DD HH:MM:SS.
+- **Año.** Año en el que se dio el accidente según el reporte oficial del IPAT.
+- **Mes.** Mes en el que se dio el accidente según el reporte oficial del IPAT descrito en palabras (ej. *enero*)
+- **Fecha.** Extracción del día, mes y año en el que se dio el incidente de tránsito según el IPAT extraído de la ***fecha del accidente*** en formato YYYY-MM-DD.
+- **Hora.** Extracción de la hora y el minuto en el que se dio el incidente de tránsito según el IPAT extraído de la ***fecha del accidente*** en formato HH:MM:SS.
+- **Clase de accidente.** Clasificación del IPAT sobre la clase de accidente de transito: choque, atropello, volcamiento, caida de ocupante, incendio, u otro (que no corresponde a las anteriores 5 clasificaciones, p. ej: sumersión).
+- **Diseño.** Sitio de la vía donde ocurrió el accidente: ciclorruta, glorieta, intersección, lote o predio, paso a nivel, paso elevado, paso inferior, pontón, puente, tramo de vía, túnel, vía peatonal.
+- **Gravedad del accidente.** Clasificación del IPAT sobre la gravedad del accidente, que corresponde al resultado más grave presentado en el accidente. Daños materiales: solo daños; accidente con heridos: hubo heridos como resultado del incidente; accidente con muertos: al menos una persona falleció como consecuencia del incidente de tránsito. No indica cantidad.
+- **Barrio.** Nombre del barrio o zona en la que sucedió el accidente de tránsito.
+- **Comuna** Comuna o corregimiento de Medellín a la que pertenece el barrio o zona en la que se ocurrió el accidente de tránsito observado conforme al registro en el IPAT.
+- **X, magna.** Coordenadas horizontales del punto en el que sucedió el accidente de tránsito registrado con origen en el sistema de coordenadas geográficas Magna - Medellín.
+- **Y, magna.** Coordenadas verticales del punto en el que sucedió el accidente de tránsito registrado con origen en el sistema de coordenadas geográficas Magna - Medellín.
+- **Longitud.** Coomponente de la longitud de las coordenadas geográficas del punto en el que se dio el accidente de tránsito registrado.
+- **Latitud.** Coomponente de la latitud de las coordenadas geográficas del punto en el que se dio el accidente de tránsito registrado.
+- **Comuna modificada.** Verificación de la comuna a la que pertenece un barrio o zona según los mapas oficiales de la Alcaldía de Medellín.
+- **Día modificado.** Componente del día de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Mes modificado.** Componente del mes de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Año modificado.** Componente del año de la fecha en la que se registró en el IPAD la observación de un accidente de tránsito.
+- **Semana modificada uno.** Número de la semana en el año en la que se dio un accidente de tránsito observado, teniendo en cuenta que la primera semana va del primero a siete de enero, la segunda va del ocho al catorce de enero y así sucesivamente sin considerar el día de la semana asociada a cada día.
+- **Semana modificada dos.** Número de la semana del año en la que se dio un accidente de tránsito observado considerando el día en el que comienza el año. Así, si un año comienza el día sabado, entonces el primero y el segundo de enero son la primera semana, pero el tres de enero, siendo lunes, registra una nueva semana, que en este caso es la segunda, y así sucesivamente.
+- **Día semana.** Nombre del día de la semana en la que se dio un accidente de tránsito observado.
+- **Mes semana.** Mes en el que se dio un accidente de tránsito según la fecha formalmente registrada en el IPAT.
+- **Festivo.** Identificación de días asociados a festivos.
+- **Flores.** Identificación de días asociados a la celebración de la Feria de las Flores en la ciudad.
+- **Fútbol.** Identificación de días en los que algún equipo local de fútbol participó en una final de fútbol de la categoría primera del país.
+- **Quincena.** Identificación de días en los que las empresas y las instituciones públicas y privadas pagan a sus empleados formalos sus quincenas.
+
+# Descripción general
+
+A continuación se puede observar una descripción general de las variables más importantes de esta base de datos.
+
+```{r Resumen de todas las variables}
+print(dfSummary(accidentes), method = "render")
+```
+
+# Año
+
+A continuación se observa una tabla de frecuencias para los años de los incidentes registrados en la base de datos de incidentes.
+
+```{r Tabla de frecuencias para el año}
+customGreen = "#2793ff"
+
+frecano <- as.data.frame(freq(accidentes$AÑO))
+
+names(frecano)[1] <- "Frecuencia"
+names(frecano)[2] <- "Válidos (%)"
+names(frecano)[3] <- "Válidos acum. (%)"
+names(frecano)[4] <- "Total acum. (%)"
+
+tabano <- formattable(frecano, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+ano <- round(tabano, 2)
+ano
+```
+
+Como se observa, los años 2015 a 2019 tienen aproximadamente la misma cantidad de observaciones en cada uno de ellos, lo cual es de esperar porque para todos ellos se cubre la totalidad del año, mientras que para los años 2014 y 2020 solo se cubre una parte de ellos. En todo caso, es interesante observar que el año en el que más accidentes se observaron fue el 2016, con 46,991 incidentes en total, lo cual representa el 17.38 % del total de observaciones. Gráficamente, se puede visualizar mediante el siguiente gráfico de barras:
+
+```{r Gráfico de barras para el año}
+g1 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = AÑO)) +
+  ggtitle("Frecuencia de accidentes por año",
+          subtitle = "Número de accidentes sucedidos por año en la ciudad de Medellín, Antioquia\nentre los años 2014 y 2020") +
+  xlab("Año") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal()
+ggplotly(g1)
+```
+
+# Clase de accidente
+
+La clase de accidente es una variable categórica de orden nominal que define de forma generar las características del incidente observado, de manera que esta variable puede asumir cualquiera de los siguientes niveles:
+
+- Choque
+- Atropello
+- Volcamiento
+- Caída del ocupante
+- Incendio
+- Otro
+
+Teniendo esto presente, se puede definir la siguiente tabla de frecuencias para esta base de datos:
+
+```{r Tabla de frecuencias para la clase de accidentes}
+customGreen = "#93ff27"
+
+frecclase <- as.data.frame(freq(accidentes$CLASE_ACCIDENTE))
+
+names(frecclase)[1] <- "Frecuencia"
+names(frecclase)[2] <- "Válidos (%)"
+names(frecclase)[3] <- "Válidos acum. (%)"
+names(frecclase)[4] <- "Total acum. (%)"
+
+
+tablaclase <- formattable(frecclase, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+clase <- round(tablaclase, 2)
+clase
+```
+
+De la tabla anterior se puede observar que el tipo de accidente más frecuente es el choque, pues se observaron un total de 180,431 incidentes de tráfico que involucraron a este tipo de colisiones, lo que representa al 66.75 %  de los accidentes, lo cual es llamativo porque resulta más de dos terceras partes de todos los incidentes ocurridos en la ciudad de Medellín entre el año 2014 y 2020. A continuación se tienen a los incidentes que no clasifican en ninguna de las categorías propuestas por Informe Policial de Accidentes de Tránsito, IPAT, es decir, los que se etiquetan como "***otro***", dado que el 11,11 % de los incidentes registrados clasifican en esta categoría. En tercer lugar se tiene a los atropellamientos que abarcan al 9.36 % de los accidentes de tránsito observados en Medellín en el periodo mencionado. Por último, vale destacar que el tipo de incidente menos frecuente de todos es el que involucra a incendios, ya que durante este periodo solo sucedieron 35 eventos de este tipo, lo cual se evidencia en el siguiente gráfico de barras, pues la barra asociada a este tipo de incidente ni siquiera es apreciable, toda vez que las colisiones opacan al resto por su alta frecuencia relativa.
+
+```{r Gráfico de barras para la clase de accidentes}
+g2 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = CLASE_ACCIDENTE)) +
+  ggtitle("Frecuencia de la clase de accidente",
+          subtitle = "Frecuencia de los tipos de accidentes sucedidos en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Clase de accidente") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g2)
+```
+
+# Diseño
+
+Uno de los aspectos más importantes a la hora de evaluar un incidente de tránsito es caracterizar el tipo de espacio en el que sucedió el accidente en términos de la infraestructura física, y esta característica es determinada en la base de datos en la variable "***diseño***", que resulta siendo una variable categórica con un nivel nominal, y se describen los siguientes tipos de infraestructura:
+
+- Ciclorruta.
+- Glorieta.
+- Intersección.
+- Lote o predio.
+- Paso a nivel.
+- Paso elevado.
+- Paso inferior.
+- Pontón.
+- Puente.
+- Tramo de vía.
+- Túnel.
+- vía peatonal.
+
+Y una tabla de frecuencias relacionada a esta variable es la siguiente:
+
+```{r Tabla de frecuencias para el diseño}
+customGreen = "#ff2793"
+
+frecdiseno <- as.data.frame(freq(accidentes$DISEÑO))
+
+names(frecdiseno)[1] <- "Frecuencia"
+names(frecdiseno)[2] <- "Válidos (%)"
+names(frecdiseno)[3] <- "Válidos acum. (%)"
+names(frecdiseno)[4] <- "Total acum. (%)"
+
+tabdiseno <- formattable(frecdiseno, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+diseno <- round(tabdiseno, 2)
+diseno
+```
+
+Revisando la tabla anterior se tiene que la infraestructura vial en la que más incidentes de tránsito sucedieron en Medellín entre el 2014 y el 2020 es el ***tramo de vía***, pues en estos se dieron el 69,45 % del total de accidentes observados en la ciudad de Medellín en el periodo mencionado, lo cual es bastante lejano al resto de incidentes. Además, es llamativo observar que el segundo tipo de infraestructura donde más incidentes se dieron son las intersecciones, donde ocurrieron el 16.30 % de los incidentes. Además, donde menos incidentes ocurrieron fue en los pasos inferiores, ya que únicamente el 0.25 % de los accidentes ocurrieron en este tipo de vías.
+
+```{r Gráfico de barras para el diseño}
+g3 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = DISEÑO)) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g3)
+```
+
+# Fecha
+
+A continuación se muestra un gráfico en el que se muestra la cantidad de accidentes que se dieron en la ciudad de Medellín en cada uno de los días en los que se observaron datos. Para poder ver con mayor detalle algún periodo particular, se recomienda hacer un zoom con las herramientas que aparecen en el extremo superior derecho del gráfico.
+
+```{r, echo = FALSE, message = FALSE}
+# Creación de una base de datos que considera únicamente las fechas
+accFechas <- accidentes %>% 
+  group_by(FECHA) %>% 
+  summarise(TOTAL = n())
+
+fig <- plot_ly(accFechas, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~FECHA, y = ~TOTAL)%>%
+  layout(showlegend = F)
+fig <- fig %>%
+  layout(
+         xaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+
+fig
+```
+
+Y del esquema anterior llama la atención que la mayoría de días se presentan entre 75y 175 accidentes por día, con algunas excepciones que se salen de estos extremos, de las cuales vale la pena mencionar que aquellas que aquellos picos superiores, es decir, fechas en las que se producen más accidentes en comparación con el resto de días, la mayoría se concentra en los meses de agosto y septiembre. Por otro lado, se debe rescatar que al comenzar cada año también se observa que ocurrencia de mínimos. También llama la atención la caída de accidentes que se presentan en la ciudad de Medellín luego del comienzo del confinamiento nacional como medida de contingencia por la pandemia de la COVID-19 el 18 de marzo de 2020.
+
+Además, de estos datos se pueden rescatar los siguientes estadísticos, excluyendo los datos posteriores al 18 de marzo de 2020 por haber menos tránsito de vehículos que en otros días:
+
+```{r}
+# Accidentalidad prepandemia
+accFechasP <- accFechas %>% 
+  filter(FECHA < as.Date("2020-03-18"))
+kable(descr(accFechasP$TOTAL), digits = 2)
+```
+Y como se observa, el número promedio de accidentes por día es 125 con una desviación estándar de 28.45 accidentes diarios. Además, el día en que menos accidentes ocurrieron fue el 4 de julio de 2014, donde se dieron 24 accidentes (nótese que este es justamente el día en el que se comienzan a tomar datos), toda vez que el día con mayor accidentes fue 4 de agosto de 2021, ya que en él se registraron 234 incidentes viales en la ciudad. Por otro lado, se tiene que la mediana es de 130 accidentes por día, lo que significa que en la mitad de los días se tienen 130 incidentes o más, mientras que en la otra mitad hay 129 accidentes de tránsito o menos. Asimismo, el primer cuantil ocurre en los 107.5 accidentes por día, y el tercer cuantil está asociado a los 144 accidentes viales diarios. Finalmente, se puede observar que el índice de asimetría es -0.4, lo que significa que los datos no son perfectamente simétricos y que tienden más hacia los valores más altos de accidentalidad diarios; además, la curtosis es de -0.06, lo cual significa que la cantidad de accidentes diarios podría tener una distribución parecida a la normal, y el hecho de que sea negativo implica que hay una concentración ligeralmente mayos datos hacia la media que en una distribución normal, lo que implica que la ocurrencia de valores extremos es menos frecuente que en una distribución auténticamente normal. Respecto a estos dos últimos parámetros, resulta interesante realizar un histograma para poder observar la distribución de accidentes diarios.
+
+```{r}
+barras <- 1 + 3.33*log(nrow(accFechas))
+g7 <- ggplot(data = accFechas,
+             aes(x = TOTAL)) +
+        geom_histogram(aes(y = (..count..)/sum(..count..)),
+                       fill = "darkblue",
+                       bins = barras) +
+        scale_y_continuous(labels=percent) +
+        ggtitle("Histograma de la cantidad de accidentes diarios en Medellín") +
+        xlab("Cantidad de accidentes diarios") +
+        ylab("Frecuencia absoluta")
+g7
+```
+
+Y en este se observa un gráfico que no se asemeja al de una distribución normal, empezando por el hecho de que la simetría no es muy clara y también por la presencia de dos modas, lo cual no se asemeja a una distribución normal en el sentido que esta tiene una y solo una moda. En todo caso, vale la pena realizar una prueba de hipótesis de normalidad para esta variable mediante el test de Lillifors, que es el test más potente para una alta cantidad de datos y que se basa en una modificación del test de Lillifors. Para ello, se plantean las siguientes hipótesis con un nivel de confianza del 95 % ($\alpha = 0.05$):
+
+$H_0:$ La distribución de la cantidad de accidentes por día en Medellín entre julio de 2014 y marzo de 2020 es normal.
+
+$H_1:$ La distribución de la cantidad de accidentes por día en Medellín entre julio de 2014 y marzo de 2020 **no** es normal.
+
+Y al realizarlo con ayuda de $\color{blue}{\textsf{R}}$ se obtiene un valor p de $V_p < 2.2 \times 10^{-16} < 0.05 = \alpha$, lo cual permite rechazar la hipótesis nula y por tanto se concluye la cantidad de accidentes que suceden en Medellín por día no tienen una distribución normal.
+
+```{r, include = FALSE}
+lillie.test(accFechas$TOTAL)
+```
+
+Ahora bien, para poder tener una mejor visibilidad, se va a hacer la suma de accidentes diarios pero presentados por mes.
+
+```{r}
+accFechasM <- accFechas %>% 
+  mutate(MES = format(as.Date(FECHA), "%Y-%m")) %>% 
+  group_by(MES) %>% 
+  summarise(`Total mes` = sum(TOTAL))
+```
+
+```{r}
+fig2 <- plot_ly(accFechasM, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~MES, y = ~`Total mes`)%>%
+  layout(showlegend = F)
+fig <- fig %>%
+  layout(
+         xaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+
+fig2
+```
+
+Y en esta se puede constatar lo que ya se había mencionado previamente y es que existen mínimos en los meses de enero y máximos en los meses de agosto. Además, llama la atención que hay comportamiento aproximadamente uniforme en todos los años, salvo en el 2019, donde el pico del mes de agosto se preserva para los meses de septiembre y octubre. Además, se debe observar que en febrero del año 2020 se tiene un comportamiento semejante al de año previos hasta el mes de marzo, donde se da inicio al confinamiento nacional por cuenta de la pandemia del virus de la COVID-19. De aquí se pueden obtener los siguientes estadísticos excluyendo los valores posteriores a marzo de 2020:
+
+```{r}
+accFechasMP <- accFechasM %>% 
+  filter(MES < "2020-03")
+kable(descr(accFechasMP$`Total mes`), digits = 2)
+```
+
+Y de lo anterior se sigue que la cantidad de accidentes promedio por mes es de 3,800, con una desviación estándar 281.27 accidentes mensuales. Además, se observa que el mínimo es de 3,142 accidentes mensuales, lo cual ocurre en junio de 2019; toda vez que el máximo es de 4,405 accidentes mensuales asociado a agosto de 2019. Además, la mediana es de 3,832 accidentes mensuales, lo que quiere decir que en al menos la mitad de los meses de los cuales hay registros cuentan con al menos 3,832 accidentes mensuales observados, toda vez que en la otra mitad se observaron una cantidad inferior de accidentes.
+
+#### Mapa de calor
+
+A continuación se observa un mapa de calor para la cantidad de accidentes observados por día.
+
+```{r}
+# source("https://raw.githubusercontent.com/iascchen/VisHealth/master/R/calendarHeat.R")
+# amznStock = as.data.frame(tidyquant::tq_get(c("AMZN"),get="stock.prices")) # get data using tidyquant
+# amznStock = amznStock[year(amznStock$date) > 2012, ] # Using data only after 2012
+# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
+```
+
+```{r}
+# calendarHeat(as.POSIXct(accFechas$FECHA), as.numeric(accFechas$TOTAL), ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
+# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
+# calendarHeat(as.POSIXct(amznStock$date), amznStock$adjusted, ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
+```
+
+```{r, out.width="150%", message = FALSE, echo = FALSE}
+library("plyr")
+accFechas <- na.omit(accFechas)
+accFechas$weekday = as.POSIXlt(accFechas$FECHA)$wday #finding the day no. of the week
+accFechas$weekdayf<-factor(accFechas$weekday,levels=rev(1:7),
+                           labels=rev(c("L","M","X","J","V","S","D"))
+                           ,ordered=TRUE) # converting the day no. to factor
+
+accFechas$monthf<-factor(month(accFechas$FECHA),levels=as.character(1:12),
+                         labels=c("Ene","Feb","Mar","Abr","May","Jun","Jul",
+                                  "Ago","Sep","Oct","Nov","Dec"),
+                         ordered=TRUE) # finding the month
+
+accFechas$yearmonth<- factor(as.yearmon(accFechas$FECHA)) # finding the year and the month from the date. Eg: Nov 2018
+
+accFechas$week <- as.numeric(format(accFechas$FECHA,"%W")) # finding the week of the year for each date
+
+accFechas<-ddply(accFechas,.(yearmonth),transform,monthweek=1+week-min(week)) # normalizing the week to start at 1 for every month
+
+p <- ggplot(accFechas, aes(monthweek, weekdayf, fill = accFechas$TOTAL)) + 
+     geom_tile(colour = "white") + facet_grid(year(accFechas$FECHA)~monthf)+
+      scale_fill_gradient(low="green", high="red") +
+      xlab("Semana del mes") +
+      ylab("") +
+      ggtitle("Mapa de calor para los accidentes diarios") +
+      labs(fill = "Acc. diarios")
+
+p
+detach("package:plyr", unload=TRUE)
+```
+
+En este resalta inicialmente quea partir del mes de marza de 2020 la cantidad de accidentes registrada por día en la última quincena de marzo y en el mes de abril es muy baja, toda vez que a medida que se va permitiendo la apertura de ciertos sectores económicos fue aumentado progresivamente la acidentalidad. Además, llama la atención que es en el mes de agosto donde se tienen más colores naranjas y oscuras, lo cual indica una alta cantidad de accidentailidad, mientras que en la primera quincena de enera predominan colores suaves y verdosos, que se asocian a bajas tasas de accidentalidad.
+
+# Mes
+
+Ahora se va a realizar la evaluación de la cantidad de accidentes viales ocurridos en la ciudad de Medellín según el mes sin importar el año, para lo cual se puede realizar la siguiente tabla de frecuencias:
+
+```{r Tabla de frecuencias para el mes}
+customGreen = "#9327ff"
+
+frecmes <- as.data.frame(freq(accidentes$MES))
+
+names(frecmes)[1] <- "Frecuencia"
+names(frecmes)[2] <- "Válidos (%)"
+names(frecmes)[3] <- "Válidos acum. (%)"
+names(frecmes)[4] <- "Total acum. (%)"
+
+tabmes <- formattable(frecmes, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+mes <- round(tabmes, 2)
+mes
+```
+
+La cual se puede acompañar del siguiente gráfico de barras.
+
+```{r}
+g6 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = fct_infreq(MES))) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g6)
+```
+
+Y como se observa, el mes en el que más accidentes se registran es agosto, que cuenta con 27,001 accidentes observados en dicho mes, seguido por 25,018 incidentes viales que ocurrieron durante los diferentes meses de julio, y en tercer lugar se tiene al mes de septiembre que registra a 24,129 accidentes. Además, los dos meses con menos incidentes viales registrados son enero con 20,098 incidentes viales y abril con 19,293 accidentes. Finalmente, es llamativo notar que los seis últimos meses del año se reparten los seis primeros lugares y que los meses del primer semestre hacen lo propio con los últimos seis puestos.    
+
+# Comuna
+
+A continución se visualiza la tabla de frecuencias para la cantidad de incidentes de tránsito registrados en las dieciséis comunas y cinco corregimientos de la ciudad de Medellín:
+
+```{r Tabla de frecuencias para la comuna}
+customGreen = "#DeF7E9"
+
+frecomuna <- as.data.frame(freq(accidentes$COMUNASMOD))
+
+frecomuna <- frecomuna %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabcomuna <- formattable(frecomuna, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabcomuna, 2)
+comuna
+```
+
+Y se acompaña con el siguiente gráfico de barras:
+
+```{r}
+g7 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = fct_infreq(COMUNASMOD))) +
+  ggtitle("Tipo de infraestructa en la que se dio el incidente",
+          subtitle = "Frecuencia del tipo de infraestructura en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Tipo de infraestructura") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g7)
+```
+
+De los esquemas anteriores llama la atención que la comuna en la que más incidentes viales ocurren es en La Candelaria, que es la comuna central de la ciudad de Medellín y que concentra a la mayoría de las sedes de instituciones públicas municipales, departamentales nacionales, así como múltiples negocios y empresas que requieren una ingente cantidad de trabajadores y asimismo atrae a miles de consumidores diariamente. Así, se tiene que en dicha comuna se dan 67,352 incidentes viales o 24.91 % del total, lo que significa que casi uno de cada cuatro accidentes suceden en la comuna de La Candelaria. A continuación, se tiene a la comuna de Laureles-Estadio, la cual registró 27,978 incidentes viales en su territorio. En el otro extremo se tiene que los cuatro territorios en los que menos incidentes viales son corregimientos, en orden de mayor a menor: San Cristóbal (2,758 accidentes de tránsito), Santa Elena (487 accidentes de tránsito), Alta Vista (457 incidentes de tránsito) y San Sebastián de Palmitas (17 incidentes de tránsito), teniendo esta última 457 accidentes de tránsito. Adicionalmente, llama la atención que el corregimiento de San Antonio de Prado, que sumó 4,313 accidentes de tránsito, tuvo más incidentes que dos comunas: Popular (3,822 incidentes de tránsito) y Santa Cruz (3,437 accidentes de tránsito).
+
+# Barrio
+
+Respecto a los barrios, se tiene que los barrios en los que más accidentes de tránsito son Corazón de Jesús (La Candelaria) con 16,084 accidentes de tránsito, La Candelaria (La Candelaria) coon 5,915 accidentes de tránsito y Caribe (Castilla) con  5,619 incidentes de tránsito en total, siendo el último caracterizado por estar en las inmediaciones de la Terminal de Transportes Norte de la ciudad de Medellín, así como varios intercambios hacia los cuatro puntos cardinales de la ciudad, así como salidas hacia la autopista Medellín - Bogotá y vías que van hacia el Caribe colombiano y hacia el occidente antioqueño.
+
+```{r Tabla de frecuencias para el barrio}
+barriosAux <- accidentes %>% # Vector con todos los barrios de la BD
+  select(c(BARRIO))
+barrios <- barriosAux %>% 
+  group_by(BARRIO) %>% 
+  summarise(Frecuencia = n())
+
+datatable(barrios,
+          colnames = c("Número de entrada",
+                       "Nombre del barrio",
+                       "Frecuencia absoluta"))
+```
+
+```{r}
+rm(list = ls())
+```
+

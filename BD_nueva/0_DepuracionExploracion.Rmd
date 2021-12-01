@@ -678,6 +678,30 @@ accidentes <- accidentes %>%
   rename(Y_MAGNA = Y)
 ```
 
+Ahora bien, al hacer una revisión de la ubicación de los accidentes en un mapa con la ayuda de *QGIS*, que es un software especializado en sistemas de información geográfica (SIG por sus siglas en inglés), se halló que hay diversas observaciones que no están situadas en la ciudad de Medellín, por lo que se procede a la remoción de dichas observaciones de la base de datos para evitar sesgos con respecto a los accidentes que efectivamente se dieron en los límites territoriales de la capital de Antioquia.
+
+```{r}
+# Componente de la longitud de los puntos donde se dieron accidentes por fuera
+# de la ciudad de Medellín
+fueraMDE <- c("-75.5455292004", "-75.5452929324", "-75.7037762763",
+              "-75.5450868236", "-75.5451646887", "-75.5464769951",
+              "-75.5459694511", "-75.5432447213", "-75.5447796256",
+              "-75.5401832599", "-75.5399327047", "-75.5386180789",
+              "-75.5319199905", "-75.5302033163", "-75.5214763864",
+              "-75.5019064689", "-75.4920015356", "-75.6501634555",
+              "-75.6502191969", "-75.6457288374")
+
+# Base de datos con los accidentes que ocurrieron por fuera de Medellín
+removibles <- accidentes %>% 
+  filter(LONGITUD %in% fueraMDE)
+```
+
+```{r}
+# Actualización de la base de datos a emplear removiendo aquellos
+# accidentes que están por fuera de medellín
+accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM removibles')
+```
+
 
 ```{r}
 write.csv(accidentes,"accidentesMDE.csv")

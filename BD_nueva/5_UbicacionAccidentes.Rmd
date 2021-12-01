@@ -1,0 +1,49 @@
+---
+title: "Mapa de ubicaciones"
+author: "Equipo de TAE"
+date: "29/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Carga de paquetes requeridos
+library("tidyverse")
+library("sf")
+library("mapview")
+```
+
+
+```{r}
+# Carga de los datos
+load("accidentesMDE2.RData")
+```
+
+```{r}
+# Selección de las variables importantes para la presentación de la información.
+accidentes <- accidentes %>% 
+  select(c("FECHA", "HORA", "CLASE_ACCIDENTE", "DISEÑO", "GRAVEDAD_ACCIDENTE", "BARRIO", "COMUNASMOD", "LONGITUD",            "LATITUD"))
+```
+
+```{r}
+# Coordenadas promedio para centrar el mapa
+# latm = mean(accidentes$LATITUD)
+# lonm = mean(accidentes$LONGITUD)
+# coom = c(lonm, latm)
+```
+
+```{r}
+# mapview(accidentes, xcol = "LONGITUD",
+#         ycol = "LATITUD",
+#         crs = 4269,
+#         grid = FALSE,
+#         map.types = "Stamen.Toner")
+```
+
+```{r}
+library("revgeo")
+```
+
