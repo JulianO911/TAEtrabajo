@@ -451,6 +451,27 @@ accidentes <- accidentes %>%
   mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 
+```{r}
+# Identificación de viernes y sábado previo a un día festivo que es lunes
+
+library("zoo")
+vs_fest <- as.Date(character())
+
+for (i in festivos) {
+    i = as.Date(i)
+    if(weekdays(i) == "lunes") {
+      vs_fest <- c(vs_fest, (i -1)) # Sábado
+      vs_fest <- c(vs_fest, (i -2)) # Domingo
+      vs_fest <- c(vs_fest, (i -3)) # Viernes
+    }
+}
+
+accidentes <- accidentes %>% 
+  mutate(PREFESTIVO = ifelse((DIAX %in% vs_fest), 1, 0))
+
+```
+
+
 ## Tipo de accidente por fecha
 
 Finalmente, para facilitar el estudio de los diferentes tipos de accidente y del diseño de vías, se generan unas bases de datos que agrupan el tipo de accidente sucedido sumando las observaciones que tienen en común aspectos como la fecha, el diseño de la vía o el barrio.
@@ -469,7 +490,8 @@ accFechaAcc <- accidentes %>%
   mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
   mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
   mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
-  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0)) %>% 
+  mutate(PREFESTIVO = ifelse((DIAX %in% vs_fest), 1, 0))
 ```
 
 ```{r, message = FALSE}
@@ -486,7 +508,8 @@ accFechaDis <- accidentes %>%
   mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
   mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
   mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
-  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0)) %>% 
+  mutate(PREFESTIVO = ifelse((DIAX %in% vs_fest), 1, 0))
 ```
 ```{r, message = FALSE}
 accFechaDisAcc <- accidentes %>%  
@@ -502,7 +525,8 @@ accFechaDisAcc <- accidentes %>%
   mutate(FESTIVO = ifelse((FECHA %in% festivos), 1, 0)) %>% 
   mutate(FLORES = ifelse((FECHA %in% ff), 1, 0)) %>% 
   mutate(FUTBOL = ifelse((FECHA %in% futbol), 1, 0)) %>% 
-  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
+  mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0)) %>% 
+  mutate(PREFESTIVO = ifelse((DIAX %in% vs_fest), 1, 0))
 ```
 ```{r}
 save(accidentes, file = "accidentesMDE2.RData")

@@ -12,12 +12,112 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Bla bla bla
 
 ```{r}
+library("tidyverse")
+library("summarytools")
+```
+
+
+```{r}
 load("accidentesMDE2.RData")
 ```
 
 ```{r}
-agrupador <- accidentes %>% 
-  group_by(BARRIO, CLASE_ACCIDENTE, GRAVEDAD_ACCIDENTE) %>% 
+barrios <- accidentes %>% 
+  group_by(BARRIO) %>% 
   summarise(CANTIDAD = n())
 ```
 
+
+```{r}
+cantidades <- as.vector(barrios$CANTIDAD)
+```
+
+```{r}
+descr(cantidades)
+hist(cantidades)
+```
+```{r}
+media = 793
+sd = 979
+max = 5917
+k1 = round((max - media)/sd)
+cortes <- as.numeric(character())
+
+for (i in 1:k1) {
+    cortes <- c(cortes, media + i * sd)
+}
+cortesx <- c("Muy bajo", "Bajo", "Moderado", "Alto", "Muy alto", "Grave")
+```
+
+
+```{r}
+agrupador <- accidentes %>%
+        group_by(BARRIO) %>%
+          summarise(TOTAL = n(),
+                    muertos = length(GRAVEDAD_ACCIDENTE[GRAVEDAD_ACCIDENTE == "Con muertos"]),
+                    heridos = length(GRAVEDAD_ACCIDENTE[GRAVEDAD_ACCIDENTE == "Con heridos"]),
+                    danos = length(GRAVEDAD_ACCIDENTE[GRAVEDAD_ACCIDENTE == "Solo daños"]),
+                    indiceGravedad = (0.7 * muertos + 0.25 * heridos + 0.05 * danos)/TOTAL)
+descr(agrupador$indiceGravedad)
+```
+
+```{r}
+ggplot(data = agrupador, mapping = aes(y = indiceGravedad, x = TOTAL)) +
+  geom_point()
+```
+```{r}
+auxiliar <- agrupador %>% 
+  select(c(BARRIO, TOTAL, indiceGravedad))
+head(auxiliar)
+```
+```{r}
+mT <- mean(auxiliar$TOTAL)
+sdT <- sd(auxiliar$TOTAL)
+miG <- mean(auxiliar$indiceGravedad)
+sdiG <- sd(auxiliar$indiceGravedad)
+auxiliar <- auxiliar %>% 
+  mutate(TOTALc = (TOTAL - mT)/sdT) %>% 
+  mutate(iGc = (indiceGravedad - miG)/sdiG)
+```
+
+```{r}
+library("factoextra")
+```
+
+```{r}
+grupos <- fviz_nbclust(auxiliar[, c(4, 5)], kmeans, method = "wss")
+grupos
+k = 3
+```
+
+```{r}
+library("stats")
+```
+
+```{r}
+k3 <- kmeans(auxiliar[, c(4, 5)], k)
+clusteres <- as.data.frame(k3[1])
+auxiliar <- cbind(auxiliar, clusteres)
+auxiliar <- auxiliar %>% 
+  mutate(cluster = recode(cluster,
+                          "1" = "Alto",
+                          "2" = "Moderano",
+                          "3" = "Bajo"))
+```
+
+
+```{r}
+f <- ggplot(data = auxiliar, mapping = aes(y = indiceGravedad, x = TOTAL)) +
+  geom_point(aes(color = cluster))
+f
+```
+```{r}
+auxiliar <- auxiliar %>% 
+  select(c(BARRIO, cluster))
+
+names(auxiliar[2]) <- "Riesgo"
+```
+
+```{r}
+save(auxiliar, file = "agrupamiento.Rmd")
+```
