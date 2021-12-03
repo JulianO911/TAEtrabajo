@@ -1,0 +1,23 @@
+---
+title: "6_Agrupamiento"
+author: "Simón Cuartas Rendón"
+date: "3/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Bla bla bla
+
+```{r}
+load("accidentesMDE2.RData")
+```
+
+```{r}
+agrupador <- accidentes %>% 
+  group_by(BARRIO, CLASE_ACCIDENTE, GRAVEDAD_ACCIDENTE) %>% 
+  summarise(CANTIDAD = n())
+```
+
