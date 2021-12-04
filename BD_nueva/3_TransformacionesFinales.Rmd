@@ -2,32 +2,19 @@
 title: "Transformaciones finales de la base de datos"
 author: "Equipo de TAE"
 date: "26/11/2021"
-output: 
+output:
   html_document:
-    toc: yes
-    toc_float: true
+    code_folding: show
+    toc: true
+    theme: paper
+    df_print: paged
+    number_sections: true
 ---
-<style type="text/css">
-.main-container {
-  max-width: 2500px;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
 
 <style>
 body {
 text-align: justify}
 </style>
-
-body{
-  font-family: Helvetica;
-  font-size: 16pt;
-}
-/* Headers */
-h1,h2,h3,h4,h5,h6{
-  font-size: 24pt;
-}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -451,7 +438,7 @@ accidentes <- accidentes %>%
   mutate(QUINCENA = ifelse((DIAX %in% quincena), 1, 0))
 ```
 
-```{r}
+```{r, include = FALSE, warning = FALSE, echo = FALSE}
 # Identificación de viernes y sábado previo a un día festivo que es lunes
 
 library("zoo")
@@ -465,10 +452,12 @@ for (i in festivos) {
       vs_fest <- c(vs_fest, (i -3)) # Viernes
     }
 }
+```
 
+
+```{r}
 accidentes <- accidentes %>% 
-  mutate(PREFESTIVO = ifelse((DIAX %in% vs_fest), 1, 0))
-
+  mutate(PREFESTIVO = ifelse((FECHA %in% vs_fest), 1, 0))
 ```
 
 

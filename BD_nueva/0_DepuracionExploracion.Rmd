@@ -2,8 +2,19 @@
 title: "Depuración de la base de datos actualizada"
 author: "Equipo, TAE"
 date: "Diciembre 2 de 2021"
-output: html_document
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    theme: paper
+    df_print: paged
+    number_sections: true
 ---
+
+<style>
+body {
+text-align: justify}
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -31,39 +42,83 @@ incidentes <- read.csv("incidentes_viales_act.csv", header = TRUE, sep = ";", de
 
 A continuación se va a mostrar cuál es la estructura de la base de datos que es descargada directamente del portal MeData
 
-```{r Estructura inicial de la base de datos, echo = FALSE, warning = FALSE}
+```{r Estructura inicial de la base de datos, echo = FALSE, warning = FALSE, include = FALSE}
 glimpse(incidentes)
 filas <- nrow(incidentes)
 ```
 
-Y como se observa, esta base de datos posee un total de `r filas`, cada una con dieciocho características: año, CBML, clase de accidente, dirección, dirección encasillada, diseño, expediente, fecha de accidente, fecha de accidentes, mes, número de radicado, número de comuna, barrio, comuna, ubicación (latitud - longitud), coordenada x de la ubicación y coordenada y de la ubicación, estas últimas con origen Magna Medellín. Revisando esto, se comienzan a notar un par de inconvenientes con la base de datos. 
+| Característica               | Formato  | Observación uno               |
+|------------------------------|----------|-------------------------------|
+| Año                          | Carácter | 2014                          |
+| CBML                         | Carácter | 1105                          |
+| Clase de accidente           | Carácter | Otro                          |
+| Dirección                    | Carácter | CR 66 CL 34                   |
+| Dirección encasillada        | Carácter | CR 066 B 034                  |
+| Diseño                       | Carácter | Tramo de vía                  |
+| Expediente                   | Carácter | A000095088                    |
+| Fecha del accidente (UTC -5) | Carácter | 05/08/2014 07:15:00           |
+| Feche del accidente (GMT)    | Carácter | 2014-08-05T12:15:000Z         |
+| Mes                          | Entero   | 8                             |
+| Número de radicado           | Doble    | 1451888                       |
+| Número de la comuna          | Carácter | 11                            |
+| Barrio                       | Carácter | Los Conquistadores            |
+| Comuna                       | Carácter | Laureles Estadio              |
+| Ubicación                    | Carácter | [-75.589313202, 6.2397866157] |
+| X                            | Doble    | 832677.9                      |
+| Y                            | Doble    | 1181995                       |
+| **Total de filas**           | 270,765  |                               |
+| **Total de columnas**        | 18       |                               |
 
-Con lo anterior, se procede a la verificación de cada una de las variables de esta base de datos para proceder con su respectiva corrección, incluyendo también una modificación en el tipo de variable que registra $\color{blue}{\textsf{R}}$ para cada variable, ya que como se observa, la mayoría de ellas son almacenadas como tipo carácter ($\texttt{chr}$), cuando debería ser realmente de tipo factor, fecha o numérico.
+Y como se observa, esta base de datos posee un total de `r filas` observaciones, cada una con dieciocho características: año, CBML, clase de accidente, dirección, dirección encasillada, diseño, expediente, fecha de accidente, fecha de accidentes, mes, número de radicado, número de comuna, barrio, comuna, ubicación (latitud - longitud), coordenada x de la ubicación y coordenada y de la ubicación, estas últimas con origen Magna Medellín.
+
+Con lo anterior, se procede a la verificación de cada una de las variables de esta base de datos para proceder con su respectiva corrección, incluyendo también una modificación en el tipo de variable que registra $\color{blue}{\textsf{R}}$ para cada característica, ya que como se observa, la mayoría de ellas son almacenadas como tipo carácter ($\texttt{chr}$), cuando debería ser realmente de tipo factor ($\texttt{fct}$), fecha ($\texttt{Date}$) o numérico ($\texttt{int}$ o $\texttt{dbl}$).
 
 # Revisión de las características de la base de datos
 
-## Año
+## Año {.tabset}
 
 Esta base de datos dice tener un registro de accidentes de la ciudad de Medellín entre los años 2014 y 2020, por lo que es de esperar que los niveles de medición de esta variable sean los años que se dan dicho periodo. Y al revisar, se obtiene que los verdaderos niveles de medición para la variable ***año*** son:
 
-```{r Años de la base de datos}
+```{r Años de la base de datos, include = FALSE}
 accidentes <- incidentes %>% 
   mutate(AÑO = as.factor(AÑO))
 levels(accidentes$AÑO)
 ```
+| Variable | Año     |
+|----------|---------|
+| No.      | Nivel   |
+| 1        | 2014    |
+| 2        | 2015    |
+| 3        | 2016    |
+| 4        | 2017    |
+| 5        | 2018    |
+| 6        | 2019    |
+| 7        | 2019\\r |
+| 8        | 2020    |
 
 Y como se observa, este es el caso, ya que todos los años entre el 2014 y el 2020, incluyéndolos a ambos, son los niveles de medición para esta base de datos; no obstante, hay un inconveniente para el año **2019**, ya que además del propio nivel de medición para esa anualidad, se tiene un segundo nivel que es llamado "*2019\\r*", lo cual debe ser corregido para que haya uniformidad y unicidad en los años. De manera que, al corregir esto y chequear nuevamente los niveles de medición para esta variable, se obtiene:
 
-```{r}
+```{r, include = FALSE}
 levels(accidentes$AÑO)[levels(accidentes$AÑO) == "2019\\r"] <- "2019"
 levels(accidentes$AÑO)
 ```
 
-Lo cual es correcto.
+| Variable | Año     |
+|----------|---------|
+| No.      | Nivel   |
+| 1        | 2014    |
+| 2        | 2015    |
+| 3        | 2016    |
+| 4        | 2017    |
+| 5        | 2018    |
+| 6        | 2019    |
+| 7        | 2020    |
 
-$ CBML
+Lo cual es correcto en tanto cada año tiene un nivel de medición asociado único. Nótese finalmente que esta variable es de corte categórico nominal, ya que a pesar de ser valores numéricos, cada año es en realidad una etiqueta y no un valor intrínseco asociado a cada accidente registrado, y es nominal porque pierde las propiedades de orden de cualquier cantidad numérica regular, es decir, no se toma a 2014 como un año menor 2015 (sino como algo más reciente en una línea temporal).
 
-Según la documentación de la base de datos, disponible en la web de MeData, la variable ***CBML*** hace referencia al código catastral de la comuna, barrio, manzana o lote catastral en la cual se dio el incidente observado. Además, considerando los objetivos de la base de datos, la información catastral no resulta relevante, por lo cual solo se va a proceder con la reforma de la tipología de esta variable, ya que se trata de una variable categórica nominal, para dejarla como una variable de tipo *factor*.
+## CBML {.tabset}
+
+Según la documentación de la base de datos, disponible en la web de MeData, la variable ***CBML*** hace referencia al código catastral de la comuna, barrio, manzana o lote catastral en la cual se dio el incidente observado. Además, considerando los objetivos de este proyecto, la información catastral no resulta relevante, por lo cual solo se va a proceder con la reforma de la tipología de esta variable, ya que se trata de una variable categórica nominal, para dejarla como una variable de tipo *factor* ($\texttt{fct}$).
 
 ```{r}
 accidentes <- accidentes %>% 
@@ -74,17 +129,31 @@ accidentes <- accidentes %>%
 
 La clase de accidente es una variable categórica nominal, que incluye los siguientes niveles de medición:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(CLASE_ACCIDENTE = as.factor(CLASE_ACCIDENTE))
 levels(accidentes$CLASE_ACCIDENTE)
 ```
 
-Y como se observa, hay varias categorías que hacen referencia a lo mismo, como lo son "*Caida de Ocupante*", "*Caída de Ocupante*", "*Caida Ocupante*" y "*Caída Ocupante*", que como se observa, se refieren a la **caída del ocupante**, lo que merece una corrección para que exista unicidad en esta característica de la base de datos. Por otro lado, existen `r sum(!complete.cases(accidentes$CLASE_ACCIDENTE))` observaciones que no incluyen ninguna descripción del tipo de accidente, por lo que serán registradas como *NA*s. 
+| Variable | Clase de accidente |
+|----------|--------------------|
+| No.      | Nivel              |
+| 1        | "" (*vacío*)       |
+| 2        | Atropello          |
+| 3        | Caida de Ocupante  |
+| 4        | Caída de Ocupante  |
+| 5        | Caida Ocupante     |
+| 6        | Caída Ocupante     |
+| 8        | Choque             |
+| 9        | Incendio           |
+| 10       | Otro               |
+| 11       | Volcamiento        |
 
-Dicho lo anterior, al realizar las correcciones correspondientes y al revisar nuevamente los niveles de medición para esta variable, se obtienen:
+Y como se observa, hay varias categorías que hacen referencia a lo mismo, como lo son "*Caida de Ocupante*", "*Caída de Ocupante*", "*Caida Ocupante*" y "*Caída Ocupante*", que como se evidencia, se refieren a la **caída del ocupante**, lo que merece una corrección para que exista unicidad en esta característica de la base de datos.
 
-```{r}
+Dicho lo anterior, al realizar las correcciones correspondientes y al revisar nuevamente los niveles de medición para esta variable, se obtiene:
+
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
                            "Caída Ocupante" = "Caída del ocupante",
@@ -95,6 +164,16 @@ levels(accidentes$CLASE_ACCIDENTE)[levels(accidentes$CLASE_ACCIDENTE) == ""] <- 
 nas_clase_acc <- sum(is.na(accidentes$CLASE_ACCIDENTE))
 levels(accidentes$CLASE_ACCIDENTE)
 ```
+
+| Variable | Clase de accidente |
+|----------|--------------------|
+| No.      | Nivel              |
+| 1        | Atropello          |
+| 2        | Caída del ocupante |
+| 3        | Choque             |
+| 4        | Incendio           |
+| 5        | Otro               |
+| 6        | Volcamiento        |
 
 Lo que es adecuado. Además, se debe tener en cuenta que esta variable contiene `r nas_clase_acc` observaciones para las cuales no se registró la clase de accidente, por lo cual serán revisadas más adelante para proceder con su imputación o, si aplica, su remoción.
 
@@ -126,21 +205,38 @@ nas_direnc <- sum(is.na(accidentes$DIRECCION.ENCASILLADA))
 vacio_direnc <- sum(accidentes$DIRECCION.ENCASILLADA == "")
 ```
 
-Realizando un procedimiento análogo al de la ***dirección***, se obtiene que existen `r unicos_direnc`, lo cual nuevamente resulta en un valor bastante elevado como para revisar cada uno de los niveles por separado para asegurar la unicidad. Por otro lado, se tiene que esta base de datos cuenta con `r nas_direnc` valores registrados como *NA*s y `r vacio_direnc` direcciones encasilladas vacías.
+Realizando un procedimiento análogo al de la ***dirección***, se obtiene que existen `r unicos_direnc` niveles de medición para la dirección encasillada, lo cual nuevamente resulta en un valor bastante elevado como para revisar cada uno de los niveles por separado para asegurar la unicidad. Por otro lado, se tiene que esta base de datos cuenta con `r nas_direnc` valores registrados como *NA*s.
 
 ## Diseño
 
 La variable ***diseño*** se refiere al tipo de infraestructura vial que generó o en la cual se dio el incidente vial registrado, y sus niveles de medición se observan a continuación:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(DISEÑO = as.factor(DISEÑO))
 levels(accidentes$DISEÑO)
 ```
 
+| Variable | Diseño        |
+|----------|---------------|
+| 1        | ""            |
+| 2        | Ciclo Ruta    |
+| 3        | Glorieta      |
+| 4        | Interseccion  |
+| 5        | Lote o Predio |
+| 6        | Paso a Nivel  |
+| 7        | Paso Elevado  |
+| 8        | Paso Inferior |
+| 9        | Pon\\xF3n     |
+| 10       | Pontón        |
+| 11       | Puente        |
+| 12       | Tramo de via  |
+| 13       | Tunel         |
+| 14       | Via peatonal  |
+
 Y se constata que existen errores en la codificación de este archivo, por lo que se procede a su corrección, así como a cambio de errores ortográficos en algunos niveles, con lo que se obtienen los siguientes nuevos niveles de medición:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(DISEÑO = recode(DISEÑO,
                          "Ciclo Ruta" = "Ciclorruta",
@@ -156,6 +252,22 @@ levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == ""] <- NA
 levels(accidentes$DISEÑO)[levels(accidentes$DISEÑO) == "Pont\\xF3n"] <- "Pontón"
 levels(accidentes$DISEÑO)
 ```
+
+| Variable | Diseño        |
+|----------|---------------|
+| No.      | Nivel         |
+| 2        | Ciclorruta    |
+| 3        | Glorieta      |
+| 4        | Intersección  |
+| 5        | Lote o predio |
+| 6        | Paso a nivel  |
+| 7        | Paso elevado  |
+| 8        | Paso inferior |
+| 10       | Pontón        |
+| 11       | Puente        |
+| 12       | Tramo de vía  |
+| 13       | Túnel         |
+| 14       | Vía peatonal  |
 
 Que es más adecuado.
 
@@ -179,9 +291,7 @@ repetidos_exp <- accidentes %>%
   filter(n() > 1)
 ```
 
-Al hacer la revisión de los expedientes repetidos, se observa que algunos de ellos parecen tener el expediente duplicado debido a que no lo tienen y son inscritos en la base de datos como "*No reportados*".
-
-Adicionalmente, se verifica que todos los expedientes tienen la característica de tener como primer carácter la letra "*A*", de manera que se cambian los expedientes que no comienzan con la letra "A" como *NA*s. Ahora, se va a revisar qué sucede con los expedientes que tienen asociadas dos o más observaciones en la base de datos, dejando de lado a las observaciones con *NA*s, ya que con estas se debe realizar un procedimiento diferente.
+Entonces, al hacer la evaluación de esta variable con $\color{blue}{\textsf{R}}$, se verifica que todos los expedientes tienen la característica de tener como primer carácter la letra "*A*", de manera que se cambian los expedientes que no comienzan con la letra "A" como *NA*s. Ahora, se va a revisar qué sucede con los expedientes que tienen asociadas dos o más observaciones en la base de datos, dejando de lado a las observaciones con *NA*s, ya que con estas se debe realizar un procedimiento diferente.
 
 ```{r}
 accidentes$EXPEDIENTE[substr(accidentes$EXPEDIENTE, 1, 1) != "A"] <- NA
@@ -198,7 +308,7 @@ triples_exp <- dobles_exp %>%
   filter(n() > 2)
 ```
 
-Se observa que hay `r nrow(dobles_exp2)` casos en los que hay duplicación o triplicación de expedientes, de los cuales dos son triplicaciones (A000311508 y A000311508). Ahora bien, al revisar los registros duplicados, se observa que algunos de ellos tienen diferencias en alguna otra característica, como la ubicación o el barrio en el cual se dio el incidente, por lo cual se debe asumir que se trata de dos expedientes diferentes a pesar de tener el mismo serial, mientras que hay otros, que de hecho son la mayoría, que por sus demás características permiten deducir que se tratan del mismo incidente de tránsito, pero que tienen alguna característica como *NA* en una repetición y completa en la otra, sobre todo con el diseño de la infraestructura en la que se dio el incidente. Con esto en mente, se procede a filtrar aquellas observaciones con expediente repetido y con diseño de infraesructura desconocido para removerlas.
+Después, se halla que hay `r nrow(dobles_exp2)` casos en los que hay duplicación o triplicación de expedientes, de los cuales dos son triplicaciones (A000311508 y A000311508). Ahora bien, al revisar los registros duplicados, se observa que algunos de ellos tienen diferencias en alguna otra característica, como la ubicación o el barrio en el cual se dio el incidente, por lo cual se debe asumir que se trata de dos expedientes diferentes a pesar de tener el mismo serial, mientras que hay otros, que de hecho son la mayoría, que por sus demás características permiten deducir que se tratan del mismo incidente de tránsito, pero que tienen alguna característica como *NA* en una repetición y completa en la otra, sobre todo con el diseño de la infraestructura en la que se dio el incidente. Con esto en mente, se procede a filtrar aquellas observaciones con expediente repetido y con diseño de infraesructura desconocido para removerlas.
 
 ```{r}
 dobles_exp4 <- dobles_exp2[(is.na(dobles_exp2$DISEÑO) == TRUE), ]
@@ -212,7 +322,7 @@ accidentes <- sqldf('SELECT * FROM accidentes EXCEPT SELECT * FROM dobles_exp5')
 
 ## Fecha de accidente
 
-Un asunto importante es la fecha y la hora en la que se dio el accidente. Sin embargo, como se vio al comienza esta característica es asumida por $\color{blue}{\textsf{R}}$ como carácter, lo cual debe ser modificado para que sea de tipo fecha. Además, se van a tomar cada uno de los elementos de esta: el día y la hora, para poderlos tener separados en una nueva variable.
+Un asunto importante es la fecha y la hora en la que se dio el accidente. Sin embargo, como se vio al comienzo esta característica es asumida por $\color{blue}{\textsf{R}}$ como carácter, lo cual debe ser modificado para que sea de tipo fecha. Además, se van a tomar cada uno de los elementos de esta: el día y la hora, para poderlos tener separados en una nueva variable.
 
 ```{r}
 accidentes <- accidentes %>% 
@@ -227,7 +337,7 @@ accidentes$HORA <- format(as.POSIXct(accidentes$FECHA_ACCIDENTE),
 
 ## Fecha de accidentes
 
-Esta base de datos cuenta con dos registros para la fecha, siendo la segunda la asociada al registro en Informe Policial de Accidentes de Tránsito, IPAT, pero con algunos inconvenientes, ya que al revisarla, se observa que todas ellas cuentan con un par de letras en medio de la hora y el día y al final de toda la fecha, lo cual dificulta el procesamiento de la base de datos y para la cual se va a realizar un mejoramiento para que conserve el formato adecuado.
+Esta base de datos cuenta con dos registros para la fecha, siendo la segunda la asociada al registro en Informe Policial de Accidentes de Tránsito, IPAT, pero con algunos inconvenientes, ya que al revisarla, se observa que todas ellas cuentan con un par de letras en medio de la hora y el día y al final de toda la fecha, lo que dificulta el procesamiento de la base de datos y para la cual se va a realizar un mejoramiento para que conserve el formato adecuado.
 
 ```{r}
 # Eliminación de los 0z
@@ -255,33 +365,66 @@ accidentes$HORAS <- format(as.POSIXct(accidentes$FECHA_ACCIDENTES),
 
 La variable gravedad se refiere al saldo que deja un incidente de tránsito en términos de si esta deja heridos o muertos, por ejemplo, lo que significa que esta es una variable categórica nominal, cuyos niveles de medición son los siguientes:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(GRAVEDAD_ACCIDENTE = as.factor(GRAVEDAD_ACCIDENTE))
 levels(accidentes$GRAVEDAD_ACCIDENTE)
 ```
+
+| Variable | Diseño         |
+|----------|----------------|
+| No.      | Nivel          |
+| 1        | Con heridos    |
+| 2        | Con muertos    |
+| 3        | Solo da\\xF1os |
+| 4        | Solo daños     |
+
 Y como se observa, hay inconvenientes con una de ellas, ya que tiene errores en su codificación, lo cual obliga a que sea corregida, y al hacerlo, se obtienen los siguientes nuevos niveles de medición:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(GRAVEDAD_ACCIDENTE = recode(GRAVEDAD_ACCIDENTE,
                            "Solo da\\xF1os" = "Solo daños"))
 levels(accidentes$GRAVEDAD_ACCIDENTE)
 ```
+| Variable | Diseño       |
+|----------|--------------|
+| No.      | Nivel        |
+| 1        | Con heridos  |
+| 2        | Con muertos  |
+| 3        | Solo daños   |
+
 Lo que es correcto.
 
 ## Mes
 
 El mes hace referencia, como se puede pensar, el mes del año en el que se dio el accidente. Como se ve a continuación, los niveles de medición de esta variable están dados en números, considerando que el primer mes del año, enero, se cataloga como "01", toda vez que el último, diciembre, se etiqueta como "12". Ahora bien, al final se va a hacer una revisión de las fechas para separar todos los componentes del día (día, mes y año), y para evitar confusiones, se va recodificar esta variable para que tenga el nombre completo de los meses.
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(MES = as.factor(MES))
 levels(accidentes$MES)
 ```
+
+| Variable | Diseño |
+|----------|--------|
+| No.      | Nivel  |
+| 1        | 1      |
+| 2        | 2      |
+| 3        | 3      |
+| 4        | 4      |
+| 5        | 5      |
+| 6        | 6      |
+| 7        | 7      |
+| 8        | 8      |
+| 9        | 9      |
+| 10       | 10     |
+| 11       | 11     |
+| 12       | 12     |
+
 Y al realizar la recodifación de esta variable, se tiene que los nueves niveles de medición son:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(MES = recode(MES,
                       "1" = "Enero",
@@ -298,6 +441,22 @@ accidentes <- accidentes %>%
                       "12" = "Diciembre"))
 levels(accidentes$MES)
 ```
+
+| Variable | Diseño     |
+|----------|------------|
+| No.      | Nivel      |
+| 1        | Enero      |
+| 2        | Febrero    |
+| 3        | Marzo      |
+| 4        | Abril      |
+| 5        | Mayo       |
+| 6        | Junio      |
+| 7        | Julio      |
+| 8        | Agosto     |
+| 9        | Septiembre |
+| 10       | Octubre    |
+| 11       | Noviembre  |
+| 12       | Diciembre  |
 
 Que es lo que se deseaba.
 
@@ -326,15 +485,55 @@ Entonces, al filtrar la base de datos para estudiar las duplicaciones en los nú
 
 Para estudiar esta variable, que por su definición es de tipo categórica nominal, se va observar primero cuáles son sus niveles:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(NUMCOMUNA = as.factor(NUMCOMUNA))
 levels(accidentes$NUMCOMUNA)
 ```
 
+| Variable | Diseño  |
+|----------|---------|
+| No.      | Nivel   |
+| 1        | 01      |
+| 2        | 02      |
+| 3        | 03      |
+| 4        | 04      |
+| 5        | 05      |
+| 6        | 06      |
+| 7        | 07      |
+| 8        | 08      |
+| 9        | 09      |
+| 10       | 1       |
+| 11       | 10      |
+| 12       | 11      |
+| 13       | 11      |
+| 14       | 12      |
+| 15       | 13      |
+| 16       | 14      |
+| 17       | 15      |
+| 18       | 16      |
+| 19       | 2       |
+| 20       | 3       |
+| 21       | 4       |
+| 22       | 5       |
+| 23       | 50      |
+| 24       | 6       |
+| 25       | 60      |
+| 26       | 7       |
+| 27       | 70      |
+| 28       | 8       |
+| 29       | 80      |
+| 30       | 9       |
+| 31       | 90      |
+| 32       | AU      |
+| 33       | In      |
+| 34       | Sin Inf |
+| 35       | SN      |
+| 36       | 0      |
+
 Y como se observa, existen problemas de unicidad, ya que las comunas que están etiquetadas con números del uno al nueve tienen dos versiones: una de dos dígitos (como "*02*") y otra de un solo dígito (como "*2*"), por lo cual se procede a realizar la corrección. Adicionalmente, los registros que no hacen referencia a ninguna comuna en particular serán recodificadas como *NA*s. Con esto, los nuevos niveles de medición de esta variable son:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(NUMCOMUNA = recode(NUMCOMUNA,
                             "01" = "1",
@@ -353,6 +552,31 @@ levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "Sin Inf"] <- NA
 levels(accidentes$NUMCOMUNA)[levels(accidentes$NUMCOMUNA) == "SN"] <- NA
 levels(accidentes$NUMCOMUNA)
 ```
+
+| Variable | Diseño |
+|----------|--------|
+| No.      | 0      |
+| 1        | 1      |
+| 2        | 2      |
+| 3        | 3      |
+| 4        | 4      |
+| 5        | 5      |
+| 6        | 6      |
+| 7        | 7      |
+| 8        | 8      |
+| 9        | 9      |
+| 10       | 10     |
+| 11       | 11     |
+| 12       | 12     |
+| 13       | 13     |
+| 14       | 14     |
+| 15       | 15     |
+| 16       | 16     |
+| 17       | 50     |
+| 18       | 60     |
+| 19       | 70     |
+| 20       | 80     |
+| 21       | 90     |
 
 Que es lo que se desea.
 
@@ -377,7 +601,7 @@ datatable(barrios,
                        "Frecuencia absoluta"))
 ```
 
-Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal manera que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden al barrio *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección, lo cual lleva a la siguiente tabla:
+Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal forma que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden a los barrios *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección, lo cual lleva a la siguiente tabla:
 
 ```{r}
 # Corrección de barrios con códigos
@@ -627,15 +851,51 @@ datatable(barrios,
 
 La comuna describe el nombre completo de la comuna en la que se dio el incidente vial observado, por lo que se puede concluir que es una variable categórica nominal, cuyos niveles de medición son:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(COMUNA = as.factor(COMUNA))
 levels(accidentes$COMUNA)
 ```
 
+| Variable | Diseño                                         |
+|----------|------------------------------------------------|
+| No.      | 0                                              |
+| 1        | "" (*vacío*)                                   |
+| 2        | 0                                              |
+| 3        | Aranjuez                                       |
+| 4        | AU                                             |
+| 5        | Bel\\xE9n                                      |
+| 6        | Belén                                          |
+| 7        | Buenos Aires                                   |
+| 8        | Castilla                                       |
+| 9        | Corregimiento de Altavista                     |
+| 10       | Corregimiento de San Antonio de Prado          |
+| 11       | Corregimiento de San Crist\\xF3bal             |
+| 12       | Corregimiento de San Cristóbal                 |
+| 13       | Corregimiento de San Sebasti\\xE1n de Palmitas |
+| 14       | Corregimiento de San Sebastián de Palmitas     |
+| 15       | Corregimiento de Santa Elena                   |
+| 16       | Doce de Octubre                                |
+| 17       | El Poblado                                     |
+| 18       | Guayabal                                       |
+| 19       | In                                             |
+| 20       | La Am\\xE9rica                                 |
+| 21       | La América                                     |
+| 22       | La Candelaria                                  |
+| 23       | Laureles Estadio                               |
+| 24       | Manrique                                       |
+| 25       | No Georef                                      |
+| 26       | Popular                                        |
+| 27       | Robledo                                        |
+| 28       | San Javier                                     |
+| 29       | Santa Cruz                                     |
+| 30       | Sin Inf                                        |
+| 31       | SN                                             |
+| 32       | Villa Hermosa                                  |
+
 Y como se observa, existen varios problemas de unicidad o de codificación, los cuales van a ser corregidos. Además, los accidentes de tránsito que carecen de registro asociado a la comuna serán codificados como *NA*s. Con esto en mente, se van a revisar nuevamente los niveles de medición:
 
-```{r}
+```{r, include = FALSE}
 accidentes <- accidentes %>% 
   mutate(COMUNA = recode(COMUNA,
                          "Bel\\xE9n" = "Belén",
@@ -651,7 +911,33 @@ levels(accidentes$COMUNA)[levels(accidentes$COMUNA) == ""] <- NA
 levels(accidentes$COMUNA)
 ```
 
-Y como se observa, es adecuado.
+| Variable | Diseño                                     |
+|----------|--------------------------------------------|
+| No.      | 0                                          |
+| 1        | Aranjuez                                   |
+| 2        | Belén                                      |
+| 3        | Buenos Aires                               |
+| 4        | Castilla                                   |
+| 5        | Corregimiento de Altavista                 |
+| 6        | Corregimiento de San Antonio de Prado      |
+| 7        | Corregimiento de San Cristóbal             |
+| 8        | Corregimiento de San Sebastián de Palmitas |
+| 9        | Corregimiento de Santa Elena               |
+| 10       | Doce de Octubre                            |
+| 11       | El Poblado                                 |
+| 12       | Guayabal                                   |
+| 13       | La América                                 |
+| 14       | La Candelaria                              |
+| 15       | Laureles Estadio                           |
+| 16       | Manrique                                   |
+| 17       | No Georef                                  |
+| 18       | Popular                                    |
+| 19       | Robledo                                    |
+| 20       | San Javier                                 |
+| 21       | Santa Cruz                                 |
+| 22       | Villa Hermosa                              |
+
+Y como se observa, es adecuado. Ahora bien, se puede notar que en el nivel número diecisiete se tiene a "*No Georef*", por lo que se debe comentar que más adelante en el trabajo de limpieza y adecuación de la base de datos se lleva a cabo un chequeo minucioso con ayuda de $\color{blue}{\textsf{R}}$ para poder asignar la comuna adecuada a cada uno de los barrios conforme el Catastro Municipal de Medellín.
 
 ## Ubicaciones geográficas
 
@@ -678,7 +964,15 @@ accidentes <- accidentes %>%
   rename(Y_MAGNA = Y)
 ```
 
-Ahora bien, al hacer una revisión de la ubicación de los accidentes en un mapa con la ayuda de *QGIS*, que es un software especializado en sistemas de información geográfica (SIG por sus siglas en inglés), se halló que hay diversas observaciones que no están situadas en la ciudad de Medellín, por lo que se procede a la remoción de dichas observaciones de la base de datos para evitar sesgos con respecto a los accidentes que efectivamente se dieron en los límites territoriales de la capital de Antioquia.
+Ahora bien, al hacer una revisión de la ubicación de los accidentes en un mapa con la ayuda de *QGIS*, que es un software especializado en sistemas de información geográfica (SIG por sus siglas en inglés), se halló que hay diversas observaciones que no están situadas en la ciudad de Medellín, por lo que se procede a la remoción de dichas observaciones de la base de datos para evitar sesgos con respecto a los accidentes que efectivamente se dieron en los límites territoriales de la capital de Antioquia. A continuación se observan dos imágenes con ejemplos de observaciones removidas, en la cual se observa un gran polígono café que corresponde al municipio de Medellín y uno o varios puntos que se asocian a la ubicación del incidente. A continuación se ilustran un par de ejemplos.
+
+![Incidente de tránsito en el municipio de Itagüí](Images/ITA.jpeg)
+
+Como se observa en esta imagen, se tiene un incidente de tránsito en el municipio de Itagüí cerca la frontera entre este municipio y Medellín, por lo que es removido.
+
+![Incidentes de tránsito en el municipio de Envigado](Images/ENV.jpeg)
+
+En esta otra imagen se observan varias ubicaciones de incidentes de tránsitos atendidos por oficiales de la Secretaría de Tránsito de Medellín pero que se dieron en el segmento envigadeño de la Vía Las Palmas que conecta al Valle de Aburrá con el Valle de San Nicolás en el oriente antioqueño. Dado que son incidentes ajenos al municipio de Medellín, se procede con su remoción.
 
 ```{r}
 # Componente de la longitud de los puntos donde se dieron accidentes por fuera

@@ -101,7 +101,7 @@ auxiliar <- cbind(auxiliar, clusteres)
 auxiliar <- auxiliar %>% 
   mutate(cluster = recode(cluster,
                           "1" = "Alto",
-                          "2" = "Moderano",
+                          "2" = "Moderado",
                           "3" = "Bajo"))
 ```
 
@@ -120,4 +120,5 @@ names(auxiliar[2]) <- "Riesgo"
 
 ```{r}
 save(auxiliar, file = "agrupamiento.Rmd")
+write.csv(auxiliar,"agrupamiento.csv")
 ```

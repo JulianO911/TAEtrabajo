@@ -2,12 +2,23 @@
 title: "Imputación de barrios"
 author: "Julián Ospina"
 date: "25/11/2021"
-output: html_document
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    theme: paper
+    df_print: paged
+    number_sections: true
 ---
+
+<style>
+body {
+text-align: justify}
+</style>
 
 # Imputación de barrios con KNN
 
-Hay un poco más de 20000 observaciones que no tienen asignado un barrio. De manera que para imputarlos, se utilizó el algoritmo KNN utilizando las observaciones que sí tenían barrio para entrenar y validar el modelo. El conjunto de entrada X son las observaciones respecto a las variables AÑO, CLASE ACCIDENTE, COMUNA, HORA, LONGITUD Y LATITUD; y el conjunto de salida corresponde a los barrios de dichas observaciones. Luego de entrenar y evaluar el modelo, se realiza la predicción utilizando las observaciones que no tienen barrio y de esta manera se imputan los barrios. Para más detalle visitar el archivo "imputación_de_barrios.py".
+Hay un poco más de 20000 observaciones que no tienen asignado un barrio, de manera que para imputarlos, se utilizó el algoritmo KNN utilizando las observaciones que sí tenían barrio para entrenar y validar el modelo. El conjunto de entrada X son las observaciones respecto a las variables **año, clase de accidente, comuna, hora, longitud y latitud.**, y el conjunto de salida corresponde a los barrios de dichas observaciones. Luego de entrenar y evaluar el modelo, se realiza la predicción utilizando las observaciones que no tienen barrio y de esta manera se imputan los barrios. Para más detalle visitar el archivo "imputación_de_barrios.py".
 
 ```{r include=FALSE}
 library("reticulate")

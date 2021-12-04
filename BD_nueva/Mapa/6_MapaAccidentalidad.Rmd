@@ -119,8 +119,14 @@ m
 ```
 
 ```{r}
-colores=sample(x=c("orange","green","yellow"),size=length(barriosMDE),replace=TRUE)
-m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=colores)
+colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
+m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=barriosMDE$colores)
 m
 ```
 
+```{r}
+copia <- as.data.frame(barriosMDE)
+write.csv(copia,"barriosCATASTRO.csv")
+```
+
+= = = 

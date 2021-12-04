@@ -2,32 +2,19 @@
 title: "Descripción de la accidentalidad en Medellín"
 author: "Simón Cuartas Rendón"
 date: "Noviembre de 2021"
-output: 
+output:
   html_document:
-    toc: yes
-    toc_float: true
+    code_folding: show
+    toc: true
+    theme: paper
+    df_print: paged
+    number_sections: true
 ---
-<style type="text/css">
-.main-container {
-  max-width: 2500px;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
 
 <style>
 body {
 text-align: justify}
 </style>
-
-body{
-  font-family: Helvetica;
-  font-size: 16pt;
-}
-/* Headers */
-h1,h2,h3,h4,h5,h6{
-  font-size: 24pt;
-}
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
@@ -53,9 +40,39 @@ library("nortest")
 load("accidentesMDE2.RData")
 ```
 
-```{r}
+```{r, include = FALSE}
 glimpse(accidentes)
 ```
+
+| Característica         | Formato  | Observación uno     |
+|------------------------|----------|---------------------|
+| Fecha del accidente    | Factor   | 2014-12-13 17:00:00 |
+| Año                    | Doble    | 2014                |
+| Mes                    | Factor   | Diciembre           |
+| Fecha                  | Fecha    | 2014-12-13          |
+| Hora                   | Factor   | 17:00:00            |
+| Clase de accidente     | Factor   | Atropello           |
+| Diseño                 | Factor   | Tramo de vía        |
+| Gravedad del accidente | Factor   | Con heridos         |
+| Barrio                 | Factor   | Los Ángeles         |
+| Comuna                 | Factor   | NA                  |
+| Coordenada x, Magna    | Doble    | 838649.             |
+| Coordenada Y, Magna    | Doble    | 1180876             |
+| Longitud               | Doble    | -75.53534           |
+| Latitud                | Doble    | 6.229826            |
+| Comunas modificado     | Carácter | La Candelaria       |
+| Día modificado         | Entero   | 13                  |
+| Mes modificado         | Doble    | 12                  |
+| Año modificado         | Doble    | 2014                |
+| Semana modificado      | Doble    | 50                  |
+| Semana modificado II   | Carácter | 50                  |
+| Día semana             | Carácter | Sábaddo             |
+| Mes semana             | Carácter | Diciembre           |
+| Festivo                | Doble    | 0                   |
+| Flores                 | Doble    | 0                   |
+| Fútbol                 | Doble    | 0                   |
+| Quincena               | Doble    | 0                   |
+| Puente                 | Doble    | 0                   |
 
 # Descripción general de la base de datos
 
@@ -87,6 +104,7 @@ La base de datos de accidentalidad de Medellín recoge todos los accidentes que 
 - **Flores.** Identificación de días asociados a la celebración de la Feria de las Flores en la ciudad.
 - **Fútbol.** Identificación de días en los que algún equipo local de fútbol participó en una final de fútbol de la categoría primera del país.
 - **Quincena.** Identificación de días en los que las empresas y las instituciones públicas y privadas pagan a sus empleados formalos sus quincenas.
+- **Puente.** Identificación de los días viernes, sábado y domingo que anteceden a un día festivo que cae en lunes.
 
 # Descripción general
 
@@ -101,7 +119,7 @@ print(dfSummary(accidentes), method = "render")
 A continuación se observa una tabla de frecuencias para los años de los incidentes registrados en la base de datos de incidentes.
 
 ```{r Tabla de frecuencias para el año}
-customGreen = "#2793ff"
+customGreen = "#c4ffff"
 
 frecano <- as.data.frame(freq(accidentes$AÑO))
 
@@ -147,8 +165,6 @@ La clase de accidente es una variable categórica de orden nominal que define de
 Teniendo esto presente, se puede definir la siguiente tabla de frecuencias para esta base de datos:
 
 ```{r Tabla de frecuencias para la clase de accidentes}
-customGreen = "#93ff27"
-
 frecclase <- as.data.frame(freq(accidentes$CLASE_ACCIDENTE))
 
 names(frecclase)[1] <- "Frecuencia"
@@ -201,8 +217,6 @@ Uno de los aspectos más importantes a la hora de evaluar un incidente de tráns
 Y una tabla de frecuencias relacionada a esta variable es la siguiente:
 
 ```{r Tabla de frecuencias para el diseño}
-customGreen = "#ff2793"
-
 frecdiseno <- as.data.frame(freq(accidentes$DISEÑO))
 
 names(frecdiseno)[1] <- "Frecuencia"
@@ -265,12 +279,27 @@ Y del esquema anterior llama la atención que la mayoría de días se presentan 
 
 Además, de estos datos se pueden rescatar los siguientes estadísticos, excluyendo los datos posteriores al 18 de marzo de 2020 por haber menos tránsito de vehículos que en otros días:
 
-```{r}
+```{r, include = FALSE}
 # Accidentalidad prepandemia
 accFechasP <- accFechas %>% 
   filter(FECHA < as.Date("2020-03-18"))
 kable(descr(accFechasP$TOTAL), digits = 2)
 ```
+
+| Parámetro                | Valor |
+|--------------------------|-------|
+| Media                    | 115   |
+| Desviación estándar      | 27.31 |
+| Mínimo                   | 23    |
+| Máximo (Q4)              | 99    |
+| Primer cuantil (Q1)      | 99.5  |
+| Mediana (Q2)             | 120   |
+| Tercer cuantil           | 135.5 |
+| Rango intercuartídico    | 35.25 |
+| Coeficiente de variación | 0.24  |
+| Coeficiente de asimetría | -0.44 |
+| Curtosis                 | -0.09 |
+
 Y como se observa, el número promedio de accidentes por día es 125 con una desviación estándar de 28.45 accidentes diarios. Además, el día en que menos accidentes ocurrieron fue el 4 de julio de 2014, donde se dieron 24 accidentes (nótese que este es justamente el día en el que se comienzan a tomar datos), toda vez que el día con mayor accidentes fue 4 de agosto de 2021, ya que en él se registraron 234 incidentes viales en la ciudad. Por otro lado, se tiene que la mediana es de 130 accidentes por día, lo que significa que en la mitad de los días se tienen 130 incidentes o más, mientras que en la otra mitad hay 129 accidentes de tránsito o menos. Asimismo, el primer cuantil ocurre en los 107.5 accidentes por día, y el tercer cuantil está asociado a los 144 accidentes viales diarios. Finalmente, se puede observar que el índice de asimetría es -0.4, lo que significa que los datos no son perfectamente simétricos y que tienden más hacia los valores más altos de accidentalidad diarios; además, la curtosis es de -0.06, lo cual significa que la cantidad de accidentes diarios podría tener una distribución parecida a la normal, y el hecho de que sea negativo implica que hay una concentración ligeralmente mayos datos hacia la media que en una distribución normal, lo que implica que la ocurrencia de valores extremos es menos frecuente que en una distribución auténticamente normal. Respecto a estos dos últimos parámetros, resulta interesante realizar un histograma para poder observar la distribución de accidentes diarios.
 
 ```{r}
@@ -284,7 +313,7 @@ g7 <- ggplot(data = accFechas,
         ggtitle("Histograma de la cantidad de accidentes diarios en Medellín") +
         xlab("Cantidad de accidentes diarios") +
         ylab("Frecuencia absoluta")
-g7
+ggplotly(g7)
 ```
 
 Y en este se observa un gráfico que no se asemeja al de una distribución normal, empezando por el hecho de que la simetría no es muy clara y también por la presencia de dos modas, lo cual no se asemeja a una distribución normal en el sentido que esta tiene una y solo una moda. En todo caso, vale la pena realizar una prueba de hipótesis de normalidad para esta variable mediante el test de Lillifors, que es el test más potente para una alta cantidad de datos y que se basa en una modificación del test de Lillifors. Para ello, se plantean las siguientes hipótesis con un nivel de confianza del 95 % ($\alpha = 0.05$):
@@ -328,30 +357,31 @@ fig2
 
 Y en esta se puede constatar lo que ya se había mencionado previamente y es que existen mínimos en los meses de enero y máximos en los meses de agosto. Además, llama la atención que hay comportamiento aproximadamente uniforme en todos los años, salvo en el 2019, donde el pico del mes de agosto se preserva para los meses de septiembre y octubre. Además, se debe observar que en febrero del año 2020 se tiene un comportamiento semejante al de año previos hasta el mes de marzo, donde se da inicio al confinamiento nacional por cuenta de la pandemia del virus de la COVID-19. De aquí se pueden obtener los siguientes estadísticos excluyendo los valores posteriores a marzo de 2020:
 
-```{r}
+```{r, include = FALSE}
 accFechasMP <- accFechasM %>% 
   filter(MES < "2020-03")
 kable(descr(accFechasMP$`Total mes`), digits = 2)
 ```
+
+| Parámetro                | Valor    |
+|--------------------------|----------|
+| Media                    | 3,521.60 |
+| Desviación estándar      | 262.63   |
+| Mínimo                   | 2,920    |
+| Máximo (Q4)              | 4,105    |
+| Primer cuantil (Q1)      | 3,339.50 |
+| Mediana (Q2)             | 3,531.5  |
+| Tercer cuantil           | 3,694    |
+| Rango intercuartídico    | 348      |
+| Coeficiente de variación | 0.07     |
+| Coeficiente de asimetría | -0.13    |
+| Curtosis                 | -0.35    |
 
 Y de lo anterior se sigue que la cantidad de accidentes promedio por mes es de 3,800, con una desviación estándar 281.27 accidentes mensuales. Además, se observa que el mínimo es de 3,142 accidentes mensuales, lo cual ocurre en junio de 2019; toda vez que el máximo es de 4,405 accidentes mensuales asociado a agosto de 2019. Además, la mediana es de 3,832 accidentes mensuales, lo que quiere decir que en al menos la mitad de los meses de los cuales hay registros cuentan con al menos 3,832 accidentes mensuales observados, toda vez que en la otra mitad se observaron una cantidad inferior de accidentes.
 
 #### Mapa de calor
 
 A continuación se observa un mapa de calor para la cantidad de accidentes observados por día.
-
-```{r}
-# source("https://raw.githubusercontent.com/iascchen/VisHealth/master/R/calendarHeat.R")
-# amznStock = as.data.frame(tidyquant::tq_get(c("AMZN"),get="stock.prices")) # get data using tidyquant
-# amznStock = amznStock[year(amznStock$date) > 2012, ] # Using data only after 2012
-# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
-```
-
-```{r}
-# calendarHeat(as.POSIXct(accFechas$FECHA), as.numeric(accFechas$TOTAL), ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
-# r2g <- c("#D61818", "#FFAE63", "#FFFFBD", "#B5E384")
-# calendarHeat(as.POSIXct(amznStock$date), amznStock$adjusted, ncolors = 99, color = "r2g", varname="AMZN Adjusted Close")
-```
 
 ```{r, out.width="150%", message = FALSE, echo = FALSE}
 library("plyr")
@@ -391,8 +421,6 @@ En este resalta inicialmente quea partir del mes de marza de 2020 la cantidad de
 Ahora se va a realizar la evaluación de la cantidad de accidentes viales ocurridos en la ciudad de Medellín según el mes sin importar el año, para lo cual se puede realizar la siguiente tabla de frecuencias:
 
 ```{r Tabla de frecuencias para el mes}
-customGreen = "#9327ff"
-
 frecmes <- as.data.frame(freq(accidentes$MES))
 
 names(frecmes)[1] <- "Frecuencia"
@@ -431,8 +459,6 @@ Y como se observa, el mes en el que más accidentes se registran es agosto, que 
 A continución se visualiza la tabla de frecuencias para la cantidad de incidentes de tránsito registrados en las dieciséis comunas y cinco corregimientos de la ciudad de Medellín:
 
 ```{r Tabla de frecuencias para la comuna}
-customGreen = "#DeF7E9"
-
 frecomuna <- as.data.frame(freq(accidentes$COMUNASMOD))
 
 frecomuna <- frecomuna %>% 
@@ -484,3 +510,196 @@ datatable(barrios,
                        "Nombre del barrio",
                        "Frecuencia absoluta"))
 ```
+
+# Variables adicionales
+
+En el capítulo de transformaciones adicionales a la base de dato se explicaron algunas variables explicativas adicionales a partir de la fecha para ser empleadas en la creación del modelo predictivo que permita proyectar los accidentes para los años 2020 y 2021. En ese sentido, se va a mostrar básico de lo que se obtuvo en cada una de estas variables extra. Debe tenerse en cuenta que como algunas de las variables creadas con dicotómicas binarias, es decir, que sus niveles de medición son únicamente el número uno o el número cero, entonces todos los resultados que se verán a continuación están en términos de proporciones o porcentajes.
+
+## Día modificado
+
+A continuación se observa una tabla en la que se evidencia la cantidad total y la proporción de accidentes que ocurren en cada uno de los días de un mes.
+
+```{r Tabla de frecuencias para el día modificado}
+frecdiax <- as.data.frame(freq(accidentes$DIAX))
+
+frecdiax <- frecdiax %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabdiax <- formattable(frecdiax, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabdiax, 2)
+comuna
+```
+
+Y como se  observa, hay una distribución aproximadamente uniforme en la cantidad de accidentes que sucede por día, ya que la proporción de incidentes viales que suceden en cada día del mes aproximadamente la misma para cada día. Esto se puede ver mejor mediante el siguiente gráfico de barras.
+
+```{r}
+g8 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = fct_infreq(as.factor(DIAX)))) +
+  ggtitle("Día del mes en que se dio el incidente de tránsito",
+          subtitle = "Frecuencia del día del mes en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Día del mes") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal()
+ggplotly(g8)
+```
+
+En este gráfico son notables las caídas en la cantidad de incidentes viables que se dan en los últimos días del mes, es decir, los días 29, 30 y 31. Sin embargo, esto puede ser atribuible al hecho de que el mes de febrero llega hasta el 28 de febrero (salvo en los años 2016 y 2020), lo que cual puede explicar la reducción en los días 29 y 30, y respecto al día 31 se tiene que tener presente que solo siete de los doce meses del mes tienen 31 días, de manera que se omiten las observaciones para el resto de los cinco meses y a partir de ello se puede explicar que su proporción sea aproximadamente la mitad del resto de día.
+
+## Semana modificada (natural)
+
+Entiéndase por semana natural aquella que siempre tendrá como primera semana del año aquella que abarca los primeros siete días del año, es decir, del primero a siete de enero, independientemente de los días de la semana en los que hayan ocurrido dichos días. En el siguiente gráfico se observa la cantidad de incidentes viables acontencidos en cada semana del año.
+
+```{r}
+g9 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = fct_infreq(as.factor(SEMANAX)))) +
+  ggtitle("Número de la semana en que se dio el incidente de tránsito",
+          subtitle = "Frecuencia del número de la semana del año en el que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Semana del año") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45))
+ggplotly(g9)
+```
+
+De este gráfico llama especialmente la atención que la semana en la que más incidentes viales se dieron, que es la número 31 (29 de julio al 4 de agosto), destacaba notablemente del resto, pero se tiene que tener presente que las otras semanas que completan las cinco semanas con más incidentes del año son aquellas que se durante la última quincena de julio y el mes de agosto, lo cual se podría explicar por el hecho de que durante es mes ocurre la Feria de Flores de Medellín, se paga la primera prima legal del año a los empleados formales de la ciudad y múltiples cadenas con importante presencia en la ciudad (como los almacenes Éxito) celebran su aniversario con descuentos. Por otro lado, si se omite la semana 53 del año (que únicamente incluye a los días 30 y 31 de diciembre), la semana con menos incidentes viales del año es la primera, lo cual se puede atribuir a la disminución del tráfico vehícular en la ciudad de Medellín dadas las vacaciones de millones de empleados y estudiantes de toda la ciudad.
+
+## Día de la semana
+
+```{r Tabla de frecuencias para el día modificado2}
+frecdiaxx <- as.data.frame(freq(accidentes$DIA_SEMANA))
+
+frecdiaxx <- frecdiaxx %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabdiaxx <- formattable(frecdiaxx, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabdiaxx, 2)
+comuna
+```
+
+De la tabla anterior se puede destacar que hay una distribución aproximadamente uniforme para los incidentes que ocurren en cada uno de los días de la semana, con un 15 % de incidentes por día, salvo el día domingo que registra el 9.35 % de los incidentes viales; empero, de los otros seis días, destaca el día viernes con un 15.92 % de los incidentes registrados, lo cual podría deberse a la gran cantidad de personas que se transportan por la ciudad no solo para atender actividades académicas, laborales y comerciales, entre otras, durante la mañana y la tarde, sino también por la salida de personas de la ciudad este día o por la búsqueda de actividades de ocio en la noche. La tabla anterior se puede ilustrar mejor a través de la siguiente gráfica de barras:
+
+```{r}
+g10 <-ggplot(data = accidentes) +
+        geom_bar(mapping = aes(x = fct_infreq(as.factor(DIA_SEMANA)))) +
+  ggtitle("Día de la semana en que se dio el incidente de tránsito",
+          subtitle = "Frecuencia del día de la semana en la que sucedieron en los incidentes de tránsito\nen la ciudad de Medellín, Antioquia entre los años 2014 y 2020") +
+  xlab("Día del mes") +
+  ylab("Frecuencia absoluta") +
+  theme_minimal()
+ggplotly(g10)
+```
+
+## Día festivo
+
+```{r Tabla de frecuencias para el día festivo}
+frecfest <- as.data.frame(freq(accidentes$FESTIVO))
+
+frecfest <- frecfest %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabfest <- formattable(frecfest, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabfest, 2)
+comuna
+```
+
+Se debe comenzar teniendo presente que aquellos días que coinciden con un día festivo son aquellos que están marcados con el número uno (1), mientras que los que no tienen el número cero (0). En virtud de lo anterior, se observa que el 2.84 % de los incidentes viales observados en Medellín entre agosto de 2014 y marzo de 2021 ocurrieron un día festivo.
+
+## Feria de Flores
+
+```{r Tabla de frecuencias para el día de feria de flores}
+frecfestf <- as.data.frame(freq(accidentes$FLORES))
+
+frecfestf <- frecfestf %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabfestf <- formattable(frecfestf, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabfestf, 2)
+comuna
+```
+
+Se debe comenzar teniendo presente que aquellos días que coinciden con un día en el que se celebró la feria de flores en Medellín son aquellos que están marcados con el número uno (1), mientras que los que no tienen el número cero (0). En virtud de lo anterior, se observa que el 2.6 % de los incidentes viales observados en Medellín entre agosto de 2014 y marzo de 2021 ocurrieron durante la feria de flores.
+
+## Feria de Flores
+
+```{r Tabla de frecuencias para la quincena}
+festquinc <- as.data.frame(freq(accidentes$QUINCENA))
+
+festquinc <- festquinc %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabquinc <- formattable(festquinc, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabquinc, 2)
+comuna
+```
+
+Se debe comenzar teniendo presente que aquellos días que coinciden con un día en el que se pagó quincena (días 1, 5, 15, 20 o 30 de cada mes) son aquellos que están marcados con el número uno (1), mientras que los que no tienen el número cero (0). En virtud de lo anterior, se observa que el 15,97 % de los incidentes viales observados en Medellín entre agosto de 2014 y marzo de 2021 ocurrieron durante la cancelación de la quincena de los empleados formales de la ciudad.
+
+
+## Días previos a un festivo
+
+```{r Tabla de frecuencias para la prefestivo}
+festprev <- as.data.frame(freq(accidentes$PREFESTIVO))
+
+festprev <- festprev %>% 
+  rename("Frecuencia" = "Freq") %>% 
+  rename("Válidos (%)" = "% Valid") %>% 
+  rename("Válidos acum. (%)" = "% Valid Cum.") %>% 
+  rename("Total (%)" = "% Total") %>% 
+  rename("Total acum. (%)" = "% Total Cum.")
+
+tabprev <- formattable(festprev, list(
+  `Frecuencia` = color_bar(customGreen),
+  `Válidos (%)` = color_bar(customGreen),
+  `Válidos acum. (%)` = color_bar(customGreen),
+  `Total (%)` = color_bar(customGreen),
+  `Total acum. (%)` = color_bar(customGreen)))
+comuna <- round(tabprev, 2)
+comuna
+```
+
+Se debe comenzar teniendo presente que aquellos días que son viernes, sábado y domingo y que ocurren previo a un lunes festivo son aquellos que están marcados con el número uno (1), mientras que los que no tienen el número cero (0). En virtud de lo anterior, se observa que el 8.07 % de los incidentes viales observados en Medellín entre agosto de 2014 y marzo de 2021 ocurrieron durante un viernes, sábado y domingo y que ocurren previo a un lunes festivo.
