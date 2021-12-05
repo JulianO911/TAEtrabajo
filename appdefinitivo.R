@@ -76,7 +76,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                              ),
                              column(2,align="center",
                                     HTML("
-                           <img src='vic.jpg' width='110%'/>
+                           <img src='gato.png' width='100%'/>
                            <p style='text-align:center;'><strong>Deivid Zhang Figueroa</strong>
                             <br>Estadística
                            </p>
