@@ -122,3 +122,8 @@ names(auxiliar[2]) <- "Riesgo"
 save(auxiliar, file = "agrupamiento.Rmd")
 write.csv(auxiliar,"agrupamiento.csv")
 ```
+
+```{r}
+rm(list = ls())
+```
+

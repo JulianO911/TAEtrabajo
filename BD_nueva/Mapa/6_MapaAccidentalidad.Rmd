@@ -109,18 +109,111 @@ barriosMDE$NOMBRE_BAR[348] <- "Antonio Nariño"
 ```{r}
 m=leaflet(barriosMDE)
 m=addTiles(m)
-m
 ```
 
 ```{r}
 m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR)
 m=addTiles(m)
-m
 ```
 
 ```{r}
-colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
-m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=barriosMDE$colores)
+vector <- c("Bajo","Moderado","Moderado","Moderado","Bajo",
+            "Alto","No aplica","Bajo","Bajo","Moderado",
+            "Bajo","Bajo","Moderado","Moderado","Bajo",
+            "Moderado","Bajo","Moderado","Moderado","Bajo",
+            "Bajo","Moderado","No aplica","Moderado","Alto",
+            "Bajo","Bajo","Bajo","Moderado","Moderado",
+            "Bajo","Bajo","Bajo","Moderado","Moderado",
+            "Moderado","Alto","Moderado","Bajo","Moderado",
+            "No aplica","Bajo","Alto","Bajo","Moderado",
+            "Moderado","Alto","Bajo","Moderado","Bajo",
+            "Bajo","Moderado","Bajo","Moderado","Moderado",
+            "Moderado","Moderado","Moderado","Moderado","bajo",
+            "Moderado","Bajo","Bajo","Moderado","Moderado",
+            "Bajo","Moderado","Moderado","Moderado","Bajo",
+            "Moderado","Alto","Moderado","Moderado","Moderado",
+            "Moderado","Moderado","No aplica","Alto","Bajo",
+            "Alto","Alto","Moderado","Bajo","Moderado",
+            "Moderado","Moderado","Bajo","Alto","Moderado",
+            "No aplica","Moderado","Bajo","Moderado","Moderado",
+            "Moderado","Moderado","Moderado","Moderado","Moderado",
+            "Bajo","Moderado","Moderado","Moderado","Moderado",
+            "Moderado","Moderado","Bajo","Moderado","Moderado",
+            "Bajo","Bajo","Bajo","No aplica","Bajo",
+            "Moderado","Bajo","Bajo","Alto","Alto",
+            "Bajo","Bajo","Moderado","Alto","Moderado",
+            "Moderado","Alto","Moderado","Moderado","Bajo",
+            "Bajo","Moderado","Moderado","Bajo","Bajo",
+            "Moderado","Moderado","Bajo","No aplica","No aplica",
+            "Moderado","Moderado","Moderado","Moderado","Bajo",
+            "Moderado","No aplica","Moderado","Moderado","Bajo",
+            "Bajo","Moderado","Alto","Bajo","Moderado",
+            "Bajo","Bajo","Moderado","Moderado","Moderado",
+            "Moderado","Bajo","Moderado","Bajo","Bajo",
+            "Moderado","Bajo","Bajo","Moderado","Bajo",
+            "Moderado","Moderado","Moderado","Bajo","Bajo",
+            "Bajo","No aplica","Bajo","Moderado","Moderado",
+            "Alto","Moderado","Moderado","Bajo","Moderado",
+            "Moderado","Bajo","Bajo","Alto","Moderado",
+            "Alto","Moderado","Bajo","Moderado","Moderado",
+            "No aplica","Moderado","Bajo","Moderado","Moderado",
+            "Moderado","Moderado","Moderado","Bajo","Bajo",
+            "Bajo","Alto","Alto","Moderado","Moderado",
+            "No aplica","Bajo","Moderado","Moderado","Bajo",
+            "Bajo","Bajo","Bajo","Bajo","Moderado",
+            "Moderado","Bajo","Moderado","Moderado","Moderado",
+            "Moderado","Moderado","Moderado","Bajo","Bajo",
+            "Bajo","Bajo","Bajo","Moderado","Moderado",
+            "Bajo","Bajo","Bajo","Moderado","No aplica",
+            "Moderado","Bajo","No aplica","Moderado","No aplica",
+            "Moderado","Bajo","Moderado","Bajo","Moderado",
+            "Bajo","Alto","Moderado","Moderado","Bajo",
+            "Moderado","Moderado","No aplica","No aplica","No aplica",
+            "Moderado","Alto","Bajo","Moderado","Moderado",
+            "Moderado","Bajo","No aplica","Bajo","Bajo",
+            "Bajo","Bajo","Alto","Moderado","Moderado",
+            "Bajo","Moderado","Moderado","Moderado","Moderado",
+            "Bajo","Moderado","Moderado","Moderado","Moderado",
+            "Moderado","Moderado","Bajo","Moderado","Moderado",
+            "Moderado","Moderado","Alto","Bajo","Bajo",
+            "Moderado","Moderado","Bajo","Moderado","Moderado",
+            "Bajo","Bajo","Moderado","Bajo","Alto",
+            "Alto","Alto","Alto","Moderado","Moderado",
+            "Moderado","No aplica","Alto","No aplica","Moderado",
+            "No aplica","Moderado","Bajo","Moderado","Moderado",
+            "Alto","Moderado","Moderado","Moderado","Bajo",
+            "Alto","Moderado","Bajo","Moderado","Moderado",
+            "Alto","Moderado","Moderado","Moderado","Moderado",
+            "No aplica","Moderado","No aplica","Moderado","Moderado",
+            "Bajo","Bajo","No aplica","Moderado","Moderado",
+            "Bajo","Moderado","Moderado")
+```
+
+```{r}
+aux["Riesgo"] <- vector
+```
+
+```{r}
+#d90000 ALTO
+#ffa333 MODERADO
+#006400 BAJO
+#808080 NA
+aux["colores"] <- rep(NA, size = nrow(aux))
+aux$colores[aux$Riesgo == "Alto"] <- "#d90000"
+aux$colores[aux$Riesgo == "Moderado"] <- "#ffa333"
+aux$colores[aux$Riesgo == "Bajo"] <- "#006400"
+aux$colores[aux$Riesgo == "No aplica"] <- "#808080"
+```
+
+
+```{r}
+#colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
+m = addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=aux$colores)
+m = addLegend(m, "bottomright",
+    colors = c("#d90000",  "#ffa333", "#006400", "#808080"),
+    labels = c("Alto", "Moderado","Bajo","No aplica"),
+    title = "Nivel de riesgo",
+    opacity = 1)
 m
 ```
 
@@ -128,5 +221,3 @@ m
 copia <- as.data.frame(barriosMDE)
 write.csv(copia,"barriosCATASTRO.csv")
 ```
-
-= = = 
