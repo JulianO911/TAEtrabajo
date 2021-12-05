@@ -1,14 +1,10 @@
----
-title: "Untitled"
-author: "Julián Ospina"
-date: "28/11/2021"
-output: html_document
----
 # Modelo predictivo
 
 ## K óptimo, selección de características y datos de entrenamiento y validación
 
-Con el dataset ya depurado, se procede a realizar el modelo. El algoritmo que se va a utilizar es el de KNN. Sin embargo, aún no se sabe cuál es el k más óptimo y además se deben seleccionar ciertas características para el modelo. Por lo que primero, se realiza una búsqueda de cuál es el k y el número de características que hacen que el modelo se desempeñe mejor. Para ello, se entrenan y validan los modelos con una característica escogida hasta 13 y con un k=1 hasta k=13 (para entrenamiento se utilizan los datos de 2014, 2015, 2016 y 2017; y para validación se usan los datos de 2018 y 2019). A estos modelos se les saca el error cuadrático medio en entrenamiento y prueba y la variación entre ambos. A continuación se muestra la tabla con todos estos datos obtenidos:
+Con el dataset ya depurado, se procede a realizar el modelo. El algoritmo que se va a utilizar es el de KNN. Sin embargo, aún no se sabe cuál es el k más óptimo y además se deben seleccionar ciertas características para el modelo. Por lo que primero, se realiza una búsqueda de cuál es el k y el número de características que hacen que el modelo se desempeñe mejor. Para ello, se entrenan y validan los modelos con una característica escogida hasta 13 y con un k=1 hasta k=13 (para entrenamiento se utilizan los datos de 2014, 2015, 2016 y 2017; y para validación se usan los datos de 2018 y 2019). A estos modelos se les saca el error cuadrático medio en entrenamiento y prueba y la variación entre ambos.
+
+
 
 ```{r include=FALSE}
 library("ggplot2")
@@ -21,12 +17,14 @@ library("reticulate")
 library("FSinR")
 library("caret")
 library("hash")
+library("plotly")
 load("accFechaTipo.RData")
 ```
 
 ```{r echo = FALSE, warning = FALSE}
 accFechaAcc <- na.omit(accFechaAcc)
 ```
+
 ```{r echo = FALSE, warning = FALSE}
 var_MSE <- function(x, y){
   var_por <- (x - y)/max(x, y)
@@ -35,172 +33,288 @@ var_MSE <- function(x, y){
 ```
 
 ```{r echo = FALSE, warning = FALSE}
-erroresEntrenamiento <- c()
-erroresValidacion <- c()
-variaciones <- c()
-numCaracteristicas <- c()
-Ks <- c()
-#models <- hash()
-#trains <- hash()
-#tests <- hash()
-  
-X_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017, -which(names(accFechaAcc) == "ACCIDENTES")] 
-y_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017,]
-  
-y_train <- y_train$ACCIDENTES
-  
-X_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,-which(names(accFechaAcc) == "ACCIDENTES")]
-y_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,]
-y_test <- y_test$ACCIDENTES
-  
-for (i in 2:13){
-  filter_evaluator <- filterEvaluator('determinationCoefficient')
-  skb_direct_search <- selectKBest(i)
-  
-  
-  mejoresColumnas <- skb_direct_search(accFechaAcc, 'ACCIDENTES', filter_evaluator)
-  
-  X_train_aux <- X_train[c(mejoresColumnas$featuresSelected)]
-  X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.factor)
-  X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.numeric)
- 
-  X_test_aux<-X_test[c(mejoresColumnas$featuresSelected)]
-  X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.factor)
-  X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.numeric)
-  
-  for (j in 1:13){
-    model <- knnreg(X_train_aux, y_train,k=j)
-    #models[[as.character(i*j)]] <- model
-    predicted_train <- predict(model,X_train_aux)
-    predicted_test <- predict(model,X_test_aux)
-    MSE_train <- RMSE(y_train, predicted_train)
-    erroresEntrenamiento <- c(erroresEntrenamiento,MSE_train)
-    MSE_test <- RMSE(y_test, predicted_test)
-    erroresValidacion <- c(erroresValidacion,MSE_test)
-    variacion_mse <- var_MSE(MSE_train, MSE_test)
-    variaciones <- c(variaciones,variacion_mse)
-    numCaracteristicas <- c(numCaracteristicas,i)
-    Ks <- c(Ks,j)
-    #trains[[as.character(i*j)]] <- X_train_aux
-    #tests[[as.character(i*j)]] <- X_test_aux
-    
-  }
+MSE <- function(X, Y){
+  MSE <- mean((X - Y)^2)
+  return(MSE)
 }
 ```
 
 ```{r echo = FALSE, warning = FALSE}
-modelos <- data.frame(num_caracteristicas = numCaracteristicas,
+modelos <- function(clase){
+  erroresEntrenamiento <- c()
+  erroresValidacion <- c()
+  variaciones <- c()
+  numCaracteristicas <- c()
+  Ks <- c()
+  X_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017, -which(names(accFechaAcc) == "ACCIDENTES")] 
+  X_train <- X_train[X_train$CLASE_ACCIDENTE==clase,]
+  y_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017,]
+    y_train <- y_train[y_train$CLASE_ACCIDENTE==clase,]
+  y_train <- y_train$ACCIDENTES
+    
+  X_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,-which(names(accFechaAcc) == "ACCIDENTES")]
+  X_test <- X_test[X_test$CLASE_ACCIDENTE==clase,]
+  y_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,]
+  y_test <- y_test[y_test$CLASE_ACCIDENTE==clase,]
+  y_test <- y_test$ACCIDENTES
+    
+  for (i in 2:13){
+    filter_evaluator <- filterEvaluator('determinationCoefficient')
+    skb_direct_search <- selectKBest(i)
+    
+    
+    mejoresColumnas <- skb_direct_search(accFechaAcc, 'ACCIDENTES', filter_evaluator)
+    
+    X_train_aux <- X_train[c(mejoresColumnas$featuresSelected)]
+    X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.factor)
+    X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.numeric)
+    X_train_aux$CLASE_ACCIDENTE <- NULL
+    
+   
+    X_test_aux<-X_test[c(mejoresColumnas$featuresSelected)]
+    X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.factor)
+    X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.numeric)
+    X_test_aux$CLASE_ACCIDENTE <- NULL
+    
+    for (j in 1:13){
+      model <- knnreg(X_train_aux, y_train,k=j)
+      predicted_train <- predict(model,X_train_aux)
+      predicted_test <- predict(model,X_test_aux)
+      MSE_train <- MSE(y_train, predicted_train)
+      erroresEntrenamiento <- c(erroresEntrenamiento,MSE_train)
+      MSE_test <- MSE(y_test, predicted_test)
+      erroresValidacion <- c(erroresValidacion,MSE_test)
+      variacion_mse <- var_MSE(MSE_train, MSE_test)
+      variaciones <- c(variaciones,variacion_mse)
+      numCaracteristicas <- c(numCaracteristicas,i)
+      Ks <- c(Ks,j)
+    }
+  }
+  modelos <- data.frame(num_caracteristicas = numCaracteristicas,
                       K = Ks,
                       MSE_entrenamiento = erroresEntrenamiento,
                       MSE_validacion = erroresValidacion,
                       porcentaje_de_variacion = variaciones)
-
-```
-
-```{r echo = FALSE, warning = FALSE}
-datatable(modelos,colnames = c("Número de características","K","MSE de entrenamiento",
+  
+  datatable(modelos,colnames = c("Número de características","K","MSE de entrenamiento",
                                "MSE de validación","Porcentaje de variación"))
-```
-La tabla muestra que hay varios modelos con variaciones de menos de 1, pero que tienen errores muy altos y a su vez, hay errores bajos pero con variaciones muy altas. De manera que el modelo que está más equilibrado es el que usa 3 características y un K=11. Por lo que se usa este modelo.
-```{r echo = FALSE, warning = FALSE}
-filter_evaluator <- filterEvaluator('determinationCoefficient')
-skb_direct_search <- selectKBest(3)
-mejoresColumnas <- skb_direct_search(accFechaAcc, 'ACCIDENTES', filter_evaluator)
+  
+  
+  
+  
+}
 ```
 
 ```{r echo = FALSE, warning = FALSE}
-X_train_aux <- X_train[c(mejoresColumnas$featuresSelected)]
-X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.factor)
-X_train_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_train_aux, as.numeric)
+defModeloyPlot <- function(clase,caracteristicas,K){
+  X_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017, -which(names(accFechaAcc) == "ACCIDENTES")] 
+  X_train <- X_train[X_train$CLASE_ACCIDENTE==clase,]
+  y_train <- accFechaAcc[accFechaAcc$AÑOX==2014 | accFechaAcc$AÑOX==2015 | accFechaAcc$AÑOX==2016 | accFechaAcc$AÑOX==2017,]
+    y_train <- y_train[y_train$CLASE_ACCIDENTE==clase,]
+  y_train <- y_train$ACCIDENTES
+    
+  X_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,-which(names(accFechaAcc) == "ACCIDENTES")]
+  X_test <- X_test[X_test$CLASE_ACCIDENTE==clase,]
+  y_test <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019 ,]
+  y_test <- y_test[y_test$CLASE_ACCIDENTE==clase,]
+  y_test <- y_test$ACCIDENTES
+  filter_evaluator <- filterEvaluator('determinationCoefficient')
+  skb_direct_search <- selectKBest(caracteristicas)
+  mejoresColumnas <- skb_direct_search(accFechaAcc, 'ACCIDENTES', filter_evaluator)
+  
+  X_train_aux <- X_train[c(mejoresColumnas$featuresSelected)]
+  X_train_aux[c(mejoresColumnas$featuresSelected)] <- as.data.frame(lapply(X_train_aux, as.factor))
+  X_train_aux[c(mejoresColumnas$featuresSelected)] <-  as.data.frame(lapply(X_train_aux, as.numeric))
+  X_train_aux$CLASE_ACCIDENTE <- NULL
  
-X_test_aux<-X_test[c(mejoresColumnas$featuresSelected)]
-X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.factor)
-X_test_aux[c(mejoresColumnas$featuresSelected)] <- lapply(X_test_aux, as.numeric)
-```
-
-```{r echo = FALSE, warning = FALSE}
-model <- knnreg(X_train_aux, y_train,k=11)
-```
-
-
-```{r echo = FALSE, warning = FALSE}
-val <- predict(model,X_test_aux)
-```
-
-
-```{r echo = FALSE, warning = FALSE}
-fechas <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019,]
-fechas <- fechas$FECHA
-```
-
-```{r echo = FALSE, warning = FALSE}
-resultado <- data.frame(fecha = fechas, 
+  X_test_aux<-X_test[c(mejoresColumnas$featuresSelected)]
+  X_test_aux[c(mejoresColumnas$featuresSelected)] <- as.data.frame(lapply(X_test_aux, as.factor))
+  X_test_aux[c(mejoresColumnas$featuresSelected)] <- as.data.frame(lapply(X_test_aux, as.numeric))
+  X_test_aux$CLASE_ACCIDENTE <- NULL
+  
+  model <- knnreg(X_train_aux, y_train,k=K)
+  val <- predict(model,X_test_aux)
+  fechas <- accFechaAcc[accFechaAcc$AÑOX==2018 | accFechaAcc$AÑOX==2019,]
+  fechas <- fechas[fechas$CLASE_ACCIDENTE==clase,]
+  fechas <- fechas$FECHA
+  resultado <- data.frame(fecha = fechas, 
                          Observado = y_test, 
                          Predicho = val )
-```
-A continuación se muestra una gráfica de los datos obervados vs los datos predichos en validación.
-```{r echo = FALSE, warning = FALSE}
-resultado_plot <- pivot_longer(resultado, 
+  resultado_plot <- pivot_longer(resultado, 
                                 cols = c("Predicho", "Observado"),
                                 names_to = "curva",
                                 values_to = "total")
 
-ggplot(data = resultado_plot,
-       aes(x = fecha, y = total, 
-       group = curva, 
-       color = curva)) +
-  geom_line() +
-  ggtitle("Comparación entre datos observados vs datos predichos") +
-  labs(y = "Total de accidentes", x = "Fecha") + 
-  theme(plot.title = element_text(hjust = 0.5)) +
-  labs(color = "Curva") + 
-  scale_color_manual(values=c("Red", "Blue"))
+   plot <- ggplot(data = resultado_plot,
+         aes(x = fecha, y = total, 
+         group = curva, 
+         color = curva)) +
+    geom_line() +
+    ggtitle(paste("Datos observados vs datos predichos para",tolower(clase),sep = " ")) +
+    labs(y = "Total de accidentes", x = "Fecha") + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    labs(color = "Curva") + 
+    scale_color_manual(values=c("Red", "Blue"))
+   
+   plot <- ggplotly(plot)
+   
+   return(list("model"=model,"plot"=plot,"train"=X_train_aux))
+  
+}
 ```
 
+## Choque
+```{r echo = FALSE, warning = FALSE}
+modelos("Choque")
+```
+Para predecir los accidentes de choque se utilizarán 4 características y un K=11.
+
+## Atropello
+
+```{r echo = FALSE, warning = FALSE}
+modelos("Atropello")
+```
+Este modelo utilizará 4 características y un k=6.
+
+## Volcamiento
+
+```{r echo = FALSE, warning = FALSE}
+modelos("Volcamiento")
+```
+Con la predicción de volcamientos se utilizarán 6 características y un k=12.
+
+## Caída del ocupante
+
+```{r echo = FALSE, warning = FALSE}
+modelos("Caída del ocupante")
+```
+Respecto a caída del ocupante se usarán 6 características y un k=12.
+
+## Incendio
+
+```{r echo = FALSE, warning = FALSE}
+modelos("Incendio")
+```
+Ya que según la tabla, los MSE son los mismos y no tienen variación, se puede utilizar cualquier número de características y cualquier k. Por simplicidad, se usará 2 características y un k=1.
+
+## Otro
+
+```{r echo = FALSE, warning = FALSE}
+modelos("Otro")
+```
+Por último, en el caso de otros accidentes, se utilizaran 3 características un k=13.
+
+A continuación se muestran las características escogidas para los modelos de choque, atropello, volcamiento, caída del ocupante, incendio y otro respectivamente:
+
+```{r echo = FALSE, warning = FALSE}
+modeloYPlotChoque <-  defModeloyPlot("Choque",4,11)
+modeloYPlotAtropello <- defModeloyPlot("Atropello",4,6)
+modeloYPlotVolcamiento <- defModeloyPlot("Volcamiento",6,12)
+modeloYPlotCaida <- defModeloyPlot("Caída del ocupante",6,12)
+modeloYPlotIncendio <- defModeloyPlot("Incendio",2,1)
+modeloYPlotOtro <- defModeloyPlot("Otro",3,13)
+```
+
+```{r echo = FALSE, warning = FALSE}
+datatable(modeloYPlotChoque$train)
+datatable(modeloYPlotAtropello$train)
+datatable(modeloYPlotVolcamiento$train)
+datatable(modeloYPlotCaida$train)
+datatable(modeloYPlotIncendio$train)
+datatable(modeloYPlotOtro$train)
+```
+
+## Entrenamiento y validación 
+
+Después de entrenar y validar los modelos se muestran los datos predichos vs los datos observados para el conjunto de validación (accidentes en el 2018 y 2019).
+
+```{r echo = FALSE, warning = FALSE}
+modeloChoque <- modeloYPlotChoque$model
+modeloAtropello <- modeloYPlotAtropello$model
+modeloVolcamiento <- modeloYPlotVolcamiento$model
+modeloCaida <- modeloYPlotCaida$model
+modeloIncendio <- modeloYPlotIncendio$model
+modeloOtro <- modeloYPlotOtro$model
+
+modeloYPlotChoque$plot
+modeloYPlotAtropello$plot
+modeloYPlotVolcamiento$plot
+modeloYPlotCaida$plot
+modeloYPlotIncendio$plot
+modeloYPlotOtro$plot
+```
+
+
+Según las gráficas, tanto el modelo de choque como el de incendio son los que mejores se ajustan a los datos (este último debido a que solo ocurre un accidente de incendio por fecha). No obstante, para atropello, volcamiento, caída del ocupante y otro no se ajustan tan bien. ¿Por qué pasa esto? La naturaleza del algoritmo KNN hace que las predicciones tengan un rango limitado por el k. En el caso de estos modelos, el k máximo es 13, por lo que el modelo no alcanza a coger datos como los de los extremos superior e inferior, que son datos atípicos. Aun así, los modelos tienen un comportamiento muy similar al de los datos observados (exceptuando el modelo de otros accidentes, que tiene un comportamiento uniforme), por lo que si se pudiera hacer una definición más exhaustiva del algoritmo (posiblemente teniendo un k máximo mucho más alto), los modelos se ajustarían mucho mejor a los datos observados.
 
 # Comportamiento del modelo para el año 2020
-Luego de tener el modelo entrenado y validado se desea mirar qué comportamiento toma para el 2020.
-```{r echo = FALSE, warning = FALSE}
-datos2020 <- accFechaAcc[accFechaAcc$AÑOX==2020,] 
-datos2020 <- datos2020[c(mejoresColumnas$featuresSelected)]
-datos2020[c(mejoresColumnas$featuresSelected)] <- lapply(datos2020, as.factor)
-datos2020[c(mejoresColumnas$featuresSelected)] <- lapply(datos2020, as.numeric)
-datos2020Y <- accFechaAcc[accFechaAcc$AÑOX==2020,]$ACCIDENTES
-``` 
+Luego de tener los modelos entrenados y validados se desea mirar qué comportamiento toman para el 2020.
 
+Nota: no se tiene en cuenta el modelo de incendio, ya que para 2020 no hay ningún accidente de este tipo.
 ```{r echo = FALSE, warning = FALSE}
-predecidos <- predict(model,datos2020)
-MSE <- RMSE(datos2020Y,predecidos)
-```
-La siguiente gráfica muestra el comportamiento de los datos predichos vs los reales:
-```{r echo = FALSE, warning = FALSE}
-resultado <- data.frame(fecha = accFechaAcc[accFechaAcc$AÑOX==2020,]$FECHA , 
+comparacion2020 <- function(modelo,clase,i){
+  filter_evaluator <- filterEvaluator('determinationCoefficient')
+  skb_direct_search <- selectKBest(i)
+  mejoresColumnas <- skb_direct_search(accFechaAcc, 'ACCIDENTES', filter_evaluator)
+  datos2020 <- accFechaAcc[accFechaAcc$AÑOX==2020,]
+  datos2020 <- datos2020[datos2020$CLASE_ACCIDENTE==clase,]
+  datos2020 <- datos2020[c(mejoresColumnas$featuresSelected)]
+  datos2020[c(mejoresColumnas$featuresSelected)] <- lapply(datos2020, as.factor)
+  datos2020[c(mejoresColumnas$featuresSelected)] <- lapply(datos2020, as.numeric)
+  datos2020$CLASE_ACCIDENTE <- NULL
+  datos2020Y <- accFechaAcc[accFechaAcc$AÑOX==2020,]
+  datos2020Y <- datos2020Y[datos2020Y$CLASE_ACCIDENTE==clase,]$ACCIDENTES
+  predecidos <- predict(modelo,datos2020)
+  fechas <- accFechaAcc[accFechaAcc$AÑOX==2020,]
+  fechas <- fechas[fechas$CLASE_ACCIDENTE==clase,]
+  resultado <- data.frame(fecha = fechas$FECHA , 
                          Observado = datos2020Y, 
                          Predicho = predecidos )
 
-resultado_plot <- pivot_longer(resultado, 
+  resultado_plot <- pivot_longer(resultado, 
                                 cols = c("Predicho", "Observado"),
                                 names_to = "curva",
                                 values_to = "total")
 
-ggplot(data = resultado_plot,
-       aes(x = fecha, y = total, 
-       group = curva, 
-       color = curva)) +
-  geom_line() +
-  ggtitle("Comparación entre datos observados vs datos predichos") +
-  labs(y = "Total de accidentes", x = "Fecha") + 
-  theme(plot.title = element_text(hjust = 0.5)) +
-  labs(color = "Curva") + 
-  scale_color_manual(values=c("Red", "Blue"))
+  plot <- ggplot(data = resultado_plot,
+         aes(x = fecha, y = total, 
+         group = curva, 
+         color = curva)) +
+    geom_line() +
+    ggtitle(paste("Datos observados vs datos predichos en 2020 para",tolower(clase),sep = " ")) +
+    labs(y = "Total de accidentes", x = "Fecha") + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    labs(color = "Curva") + 
+    scale_color_manual(values=c("Red", "Blue"))
+  ggplotly(plot)
+  
+}
+
+``` 
+
+```{r echo = FALSE, warning = FALSE}
+comparacion2020(modeloChoque,"Choque",4)
+comparacion2020(modeloAtropello,"Atropello",4)
+comparacion2020(modeloVolcamiento,"Volcamiento",6)
+comparacion2020(modeloCaida,"Caída del ocupante",6)
+comparacion2020(modeloOtro,"Otro",3)
 ```
 
 
-El comportamiento que tiene el modelo, según la gráfica, es un resultado esperado según los datos de los años anteriores con MSE de 18.03405. Sin embargo, los datos reales muestran una caída a mediados de marzo. Esto claramente se debe a la pandemia ocasionada por el nuevo coronavirus Covid-19, lo cual produjo que el tránsito se redujera y por ende, también el número de accidentes. Al modelo le era imposible saber que un suceso de esta magnitud ocurriera, por ende es normal que para mediados de marzo proyecte un comportamiento muy diferente al real.
+
+El comportamiento que tienen los modelos, según la gráficas, es un resultado esperado según los datos de los años anteriores. Sin embargo, los datos reales muestran una caída a mediados de marzo. Esto claramente se debe a la pandemia ocasionada por el nuevo coronavirus Covid-19, lo cual produjo que el tránsito se redujera y por ende, también el número de accidentes. A los modelos le era imposible saber que un suceso de esta magnitud ocurriera, por ende es normal que para mediados de marzo se proyecte un comportamiento muy diferente al real.
 
 ```{r include=FALSE}
-#save(model,file = "ModeloPredictivo.RData")
+save(modeloChoque,file = "ModeloChoque.RData")
+save(modeloAtropello,file = "ModeloAtropello.RData")
+save(modeloVolcamiento,file = "ModeloVolcamiento.RData")
+save(modeloCaida,file = "ModeloCaida.RData")
+save(modeloIncendio,file = "ModeloIncendio.RData")
+save(modeloOtro,file = "ModeloOtro.RData")
 ```
+
+
+
 
 
 
