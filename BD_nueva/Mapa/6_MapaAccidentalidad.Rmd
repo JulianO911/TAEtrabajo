@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r}
 library("leaflet")
 library("rgdal")
+library("mapview")
 ```
 
 ```{r}
@@ -208,7 +209,18 @@ aux$colores[aux$Riesgo == "No aplica"] <- "#808080"
 
 ```{r}
 #colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
-m = addPolygons(m,popup=barriosMDE$NOMBRE_BAR,color=aux$colores)
+m = addPolygons(m,
+                color = aux$colores,
+                fillOpacity = 0.5,
+                popup = paste0(
+                "<b>Barrio: </b>",
+                barriosMDE$NOMBRE_BAR,
+                "<br>",
+                 "<b>Comuna: </b>",
+                barriosMDE$NOMBRE_COM,
+                "<br>",
+                "<b>Nivel de riesgo: </b>",
+                aux$Riesgo))
 m = addLegend(m, "bottomright",
     colors = c("#d90000",  "#ffa333", "#006400", "#808080"),
     labels = c("Alto", "Moderado","Bajo","No aplica"),
@@ -216,6 +228,12 @@ m = addLegend(m, "bottomright",
     opacity = 1)
 m
 ```
+
+```{r}
+m %>% 
+  
+```
+
 
 ```{r}
 copia <- as.data.frame(barriosMDE)
