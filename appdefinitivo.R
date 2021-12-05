@@ -9,6 +9,19 @@ library(mapview)
 library(shinycssloaders)
 library(shinyWidgets)
 library(data.table)
+library("ggplot2")
+library("DT")
+library("kableExtra")
+library("tidyverse")
+library("knitr")
+library("sqldf")
+library("reticulate")
+library("FSinR")
+library("caret")
+library("hash")
+library("plotly")
+library("lubridate")
+library("dplyr")
 load("BD_nueva/accidentesMDE2.RData")
 
 # Define UI
@@ -392,8 +405,98 @@ server <- function(input, output) {
   library(ggplot2)
   
   ## Base de datos para la función ------------------
-  fest_2021 <- read_xlsx("festivos2021.xlsx") # Pendiente
-  fest_2021 <- fest_2021 %>% mutate(Fecha = as.Date(Fecha, format = "yyyy/mm/dd"))
+  diasFestivos <- function(){
+    fest14 <- c("2014-01-01", "2014-01-06", "2014-03-24",
+                "2014-04-17", "2014-04-18", "2014-05-01",
+                "2014-06-02", "2014-06-23", "2014-06-30",
+                "2014-07-20", "2014-08-07", "2014-08-18",
+                "2014-10-13", "2014-11-03", "2014-11-17",
+                "2014-12-08", "2014-12-25")
+    
+    fest15 <- c("2015-01-01", "2015-01-12", "2015-03-23",
+                "2015-04-02", "2015-04-03", "2015-05-01",
+                "2015-06-08", "2015-06-15", "2015-06-29",
+                "2015-07-20", "2015-08-07", "2015-08-17",
+                "2015-10-12", "2015-11-02", "2015-11-16",
+                "2015-12-08", "2015-12-25", "2015-05-18")
+    
+    fest16 <- c("2016-01-01", "2016-01-11", "2016-03-21",
+                "2016-03-24", "2016-03-25", "2016-05-01",
+                "2016-05-30", "2016-06-06", "2016-07-04",
+                "2016-07-20", "2016-08-07", "2016-08-15",
+                "2016-10-17", "2016-11-07", "2016-11-14",
+                "2016-12-08", "2016-12-25", "2016-05-09")
+    
+    fest17 <- c("2017-01-01", "2017-01-09", "2017-03-20",
+                "2017-04-13", "2017-04-14", "2017-05-01",
+                "2017-05-29", "2017-06-19", "2017-07-03",
+                "2017-07-20", "2017-08-07", "2017-08-21",
+                "2017-10-16", "2017-11-06", "2017-11-13",
+                "2017-12-08", "2017-12-25", "2017-06-26")
+    
+    fest18 <- c("2018-01-01", "2018-01-08", "2018-03-19",
+                "2018-03-19", "2018-03-30", "2018-05-01",
+                "2018-05-14", "2018-06-04", "2018-07-02",
+                "2018-07-20", "2018-08-07", "2018-08-20",
+                "2018-10-15", "2018-11-05", "2018-11-12",
+                "2018-12-08", "2018-12-25", "2018-06-11")
+    
+    fest19 <- c("2019-01-01", "2019-01-07", "2019-03-25",
+                "2019-04-19", "2019-04-18", "2019-05-01",
+                "2019-06-03", "2019-06-24", "2019-07-01",
+                "2019-07-20", "2019-08-07", "2019-08-19",
+                "2019-10-14", "2019-11-04", "2019-11-11",
+                "2019-12-08", "2019-12-25")
+    
+    fest20 <- c("2020-01-01", "2020-01-06", "2020-03-23",
+                "2020-04-10", "2020-04-09", "2020-05-01",
+                "2020-06-15", "2020-06-22", "2020-06-29",
+                "2020-07-20", "2020-08-07", "2020-08-17",
+                "2020-10-12", "2020-11-02", "2020-11-16",
+                "2020-12-08", "2020-12-25", "2020-05-25")
+    fest21 <- c("2021-01-01", "2021-01-11", "2021-03-22",
+                "2021-04-01", "2021-04-02", "2021-05-01",
+                "2021-05-17", "2021-06-07", "2021-06-14",
+                "2021-07-05", "2021-07-20", "2021-08-07",
+                "2021-08-16", "2021-10-18", "2021-11-01",
+                "2021-11-15", "2021-12-08", "2021-12-25")
+    fest22 <- c("2022-01-01", "2022-01-10", "2022-03-21",
+                "2022-04-14", "2022-04-15", "2022-05-01",
+                "2022-05-30", "2022-06-20", "2022-06-27",
+                "2022-07-04", "2022-07-20", "2022-08-07",
+                "2022-08-15", "2022-10-17", "2022-11-07",
+                "2022-11-14", "2022-12-08", "2022-12-25")
+    fest23 <- c("2023-01-01", "2023-01-09", "2023-03-20",
+                "2023-04-06", "2023-04-07", "2023-05-01",
+                "2023-05-22", "2023-06-12", "2023-06-19",
+                "2023-07-03", "2023-07-20", "2023-08-07",
+                "2023-08-21", "2023-10-16", "2023-11-06",
+                "2023-11-13", "2023-12-08", "2023-12-25")
+    
+    fest24 <- c("2024-01-01", "2024-01-08", "2024-03-25",
+                "2024-03-28", "2024-03-29", "2024-05-01",
+                "2024-05-13", "2024-06-03", "2024-06-10",
+                "2024-07-01", "2024-07-20", "2024-08-07",
+                "2024-08-19", "2024-10-14", "2024-11-04",
+                "2024-11-11", "2024-12-08", "2024-12-25")
+    
+    fest25 <- c("2025-01-01", "2025-01-06", "2025-03-24",
+                "2025-04-13", "2025-04-17", "2025-04-18",
+                "2025-04-20", "2025-05-01", "2025-06-02",
+                "2025-06-23", "2025-06-30", "2025-07-20",
+                "2025-08-07", "2025-08-18", "2025-10-13",
+                "2025-11-03", "2025-11-17", "2025-12-08",
+                "2025-12-25")
+    
+    
+    
+    
+    festivos <- c(fest14,fest15,fest15,fest16,fest17,fest18,fest19,fest20,fest21,fest22,
+                  fest23,fest24,fest25)
+    
+    festivos <- as.Date(festivos)
+    return(festivos)
+  }
   
   ## FUNCIóN ----------------------------------------------
   
@@ -407,64 +510,8 @@ server <- function(input, output) {
                         fecha_fin,
                         intervalo)
   {
-    # INTERVALO: SEMANA ------------------
-    if (intervalo == "Semana"){
-      
-      fecha_ini <- fecha_ini - yday(fecha_ini) %% 7 + 1
-      
-      if (yday(fecha_ini) %% 7 != 0){
-        fecha_fin <- fecha_fin + (7 - yday(fecha_fin) %% 7)
-      }
-      
-      # Se verifican inconsistencia
-      if (fecha_ini < as.Date("2021-01-01")){
-        fecha_ini <- as.Date("2021-01-01")
-      }
-      
-      # Se verifican inconsistencia
-      if (fecha_fin > as.Date("2021-12-31")){
-        fecha_fin <- as.Date("2021-12-31")
-      }     
-      
-      
-    }
-    
-    # INTERVALO: SEMANA ------------------
-    if (intervalo == "Mes"){
-      fecha_ini <- floor_date(fecha_ini, unit = "month")  # Primer día del mes
-      fecha_fin <- ceiling_date(fecha_fin, unit = "month") - 1 # último día del mes
-    }
-    
-    # INTERVALO: DíA ---------------------
-    if (intervalo == "Día"){
-      # No se necesita hacer ninguna conversión
-      fecha_ini <- fecha_ini
-      fecha_fin <- fecha_fin
-    }
-    
-    # Base de datos inicial
-    df_fechas <- data.frame(fecha = seq(fecha_ini,fecha_fin, by = '1 day'))
-    
-    # Obtención de covariables necesarias en el modelo
-    df_fechas <- df_fechas %>% mutate(semana = week(fecha),
-                                      semana_dia = as.factor(wday(fecha, label = TRUE, abbr = FALSE)),
-                                      fes_antes = ifelse(fecha %in% (fest_2021$Fecha[fest_2021$Festivo == 1] + 1), 1, 0),
-                                      fes_despues = ifelse(fecha %in% (fest_2021$Fecha[fest_2021$Festivo == 1] - 1), 1, 0)
-    )
-    
-    # Se añade la celebración
-    for (i in 1:nrow(df_fechas)){
-      df_fechas$celebracion[i] <- ifelse(df_fechas$fecha[i] %in% fest_2021$Fecha, fest_2021$Celebracion[fest_2021$Fecha == df_fechas$fecha[i]], "No")
-    }
-    
-    # Conversión a factores
-    cols <- c("semana_dia",
-              "semana",
-              "celebracion",
-              "fes_antes",
-              "fes_despues")
-    
-    df_fechas[cols] <- lapply(df_fechas[cols], as.factor)
+    # Creación de fechas
+    df_fechas <- seq(from=as.Date(fecha_ini), to=as.Date(fecha_fin), format = "days", by=1)
     
     return(df_fechas)
   }
@@ -478,38 +525,109 @@ server <- function(input, output) {
   load("BD_nueva/ModeloVolcamiento.Rdata")
   load("BD_nueva/ModeloOtro.Rdata")
   load("BD_nueva/Modeloincendio.Rdata")
+  festivos <- diasFestivos()
+  
+  ##Procesamiento requerido inicial
+  
+  
+  
+  ########### USO DE LAS FUNCIONES ############
+  
+  
+  df_fechas <- reactive({
+    gen_datos(input$fecha_ini, input$fecha_fin, input$intervalo)
+  })
+  
+  df_prediccion <- reactive({
+    prediccion(input$clase, df_fechas(), input$intervalo)
+  })
   
   prediccion <- function(clase, 
                          df_fechas,
                          intervalo){
     
+    choques <- data.frame(DIA_SEMANA = weekdays(df_fechas),
+                          FESTIVO = ifelse((df_fechas %in% festivos), 1, 0),
+                          SEMANAXX = strftime(df_fechas, format = "%V")) 
+    
+    atropellos <- data.frame( DIA_SEMANA = weekdays(df_fechas),
+                              FESTIVO = ifelse((df_fechas %in% festivos), 1, 0),
+                              SEMANAXX = strftime(df_fechas, format = "%V"))
+    volcamientos <- data.frame(DIA_SEMANA = weekdays(df_fechas),
+                               FESTIVO = ifelse((df_fechas %in% festivos), 1, 0),
+                               SEMANAXX = strftime(df_fechas, format = "%V"),
+                               AÑOX = year(df_fechas),
+                               MES_SEMANA = months(df_fechas))
+    caidasDelOcupante <- data.frame(
+      DIA_SEMANA = weekdays(df_fechas),
+      FESTIVO = ifelse((df_fechas %in% festivos), 1, 0),
+      SEMANAXX = strftime(df_fechas, format = "%V"),
+      AÑOX = year(df_fechas),
+      MES_SEMANA = months(df_fechas))
+    
+    incendios <- data.frame(
+      DIA_SEMANA = weekdays(df_fechas))
+    
+    otros <- data.frame(
+      DIA_SEMANA = weekdays(df_fechas),
+      FESTIVO = ifelse((df_fechas %in% festivos), 1, 0))
+    
+    
+    choques <- as.data.frame(lapply(choques, as.factor))
+    choques <- as.data.frame(lapply(choques, as.numeric))
+    
+    volcamientos <- as.data.frame(lapply(volcamientos, as.factor))
+    volcamientos <- as.data.frame(lapply(volcamientos, as.numeric))
+    
+    atropellos <- as.data.frame(lapply(atropellos, as.factor))
+    atropellos <- as.data.frame(lapply(atropellos, as.numeric))
+    
+    caidasDelOcupante <- as.data.frame(lapply(caidasDelOcupante, as.factor))
+    caidasDelOcupante <- as.data.frame(lapply(caidasDelOcupante, as.numeric))
+    
+    incendios <- as.data.frame(lapply(incendios, as.factor))
+    incendios <- as.data.frame(lapply(incendios, as.numeric))
+    
+    otros <- as.data.frame(lapply(otros, as.factor))
+    otros <- as.data.frame(lapply(otros, as.numeric))
+    
     if (clase == "Atropello"){
-      prediccion <- predict(modeloAtropello, newdata = df_fechas)
+      prediccion <- predict(modeloAtropello,atropellos)
+      prediccion <- as.integer(prediccion)
     } 
     
-    else if (clase == "Caida de ocupante"){
-      prediccion <- predict(modeloCaida, newdata = df_fechas)
+    else if (clase == "Caída del ocupante"){
+      prediccion <- predict(modeloCaida,caidasDelOcupante)
+      prediccion <- as.integer(prediccion)
     }
     
     else if (clase == "Choque"){
-      prediccion <- predict(modeloChoque, newdata = df_fechas)
+      prediccion <- predict(modeloChoque,choques)
+      prediccion <- as.integer(prediccion)
     }
     
     else if (clase == "Volcamiento"){
-      prediccion <- predict(modeloVolcamiento, newdata = df_fechas)
+      prediccion <- predict(modeloVolcamiento,volcamientos)
+      prediccion <- as.integer(prediccion)
     }
     
     else if (clase == "Otro"){
-      prediccion <- round(predict(modeloOtro, newdata = df_fechas))
+      prediccion <- predict(modeloOtro,otros)
+      prediccion <-as.integer(prediccion)
+    }
+    
+    else if (clase == "Incendio"){
+      prediccion <- predict(modeloIncendio,incendios)
+      prediccion <- as.integer(prediccion)
     }
     
     if (intervalo == "Dia"){
-      df_prediccion <- data.frame(fecha = df_fechas$fecha, Total = round(prediccion))
+      df_prediccion <- data.frame(fecha = df_fechas, Total = round(prediccion))
     } 
     
     else if (intervalo == "Semana"){
       
-      df_prediccion <- data.frame(fecha = df_fechas$fecha, Total = prediccion) %>% 
+      df_prediccion <- data.frame(fecha = df_fechas, Total = prediccion) %>% 
         mutate(fecha = week(fecha)) %>%    # DANGER: VERIFICAR GRÁFICO Y TRATAR DE CAMBIAR
         group_by(fecha) %>% summarise(Total = round(sum(Total))) # DANGER
       
@@ -517,7 +635,7 @@ server <- function(input, output) {
     
     else if (intervalo == "Mes"){
       
-      df_prediccion <- data.frame(fecha = df_fechas$fecha, Total = prediccion) %>%
+      df_prediccion <- data.frame(fecha = df_fechas, Total = prediccion) %>%
         mutate(fecha = month(fecha)) %>%  # DANGER: VERIFICAR GRÁFICO Y TRATAR DE CAMBIAR
         group_by(fecha) %>% summarise(Total = round(sum(Total))) # DANGER
       
@@ -546,16 +664,7 @@ server <- function(input, output) {
     
   }
   
-  ########### USO DE LAS FUNCIONES ############
   
-  
-  df_fechas <- reactive({
-    gen_datos(input$fecha_ini, input$fecha_fin, input$intervalo)
-  })
-  
-  df_prediccion <- reactive({
-    prediccion(input$clase, df_fechas(), input$intervalo)
-  })
   
   ############ GRÁFICO ##############
   
