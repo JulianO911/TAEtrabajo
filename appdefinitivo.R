@@ -26,14 +26,7 @@ load("BD_nueva/accidentesMDE2.RData")
 
 # Define UI
 ui <- fluidPage(theme = shinytheme("yeti"),
-                #setBackgroundColor(
-                # color = "Snow",
-                # gradient = c("linear", "radial"),
-                #  direction = c("bottom", "top", "right", "left"),
-                # shinydashboard = FALSE
-                #  ),
                 navbarPage(
-                  # theme = "cerulean",  # <--- To use a theme, uncomment this
                   "Accidentalidad en Medellín",
                   tabPanel("Presentación",
                            fluidRow(id='header1',
@@ -288,12 +281,12 @@ ui <- fluidPage(theme = shinytheme("yeti"),
 server <- function(input, output) {
   barrios_med=readOGR("BD_nueva/Mapa/Limite_Barrio_Vereda_Catastral.shp",layer="Limite_Barrio_Vereda_Catastral") # Corregir
   nombres_barrios=iconv(barrios_med@data$NOMBRE,"UTF-8","ISO_8859-1") # Corregir
-  grupos <- read.csv(file = 'Agrupamiento_barrios_ordenado3.csv' ) # Corregir
-  colorMaker <- colorFactor(palette = c("#ABEBC6", "#F5B041", "#EC7063","#922B21"), 
-                            levels = c("Bajo", "Medio", "Alto","Muy Alta"))
+  grupos <- read.csv(file = 'pruebadecsv.csv' ) # Corregir
+  colorMaker <- colorFactor(palette = c("#808080", "#006400", "#ffa333","#d90000"), 
+                            levels = c("No aplica", "Bajo", "Moderado", "Alto"))
   pal <- colorFactor(
-    palette = c("#EC7063","#ABEBC6", "#F5B041"),
-    domain = c("Bajo", "Medio", "Alto")
+    palette = c("#d90000", "#006400","#ffa333", "#808080"),
+    domain = c("No aplica", "Bajo", "Moderado", "Alto")
   )
   accidentes <- data.table(read.csv(file = 'BD_nueva/accidentesMDE2.csv'))
   accidentesFilter <- accidentes[,-c(11,12,13,14)] # Corregir
@@ -379,19 +372,18 @@ server <- function(input, output) {
       addPolygons(data=barrios_med, # Corregir
                   weight = 1,
                   color = "white",
-                  fillColor =colorMaker(grupos$riesgo),
+                  fillColor =colorMaker(grupos$Riesgo),
                   fillOpacity = 0.7,
                   
-                  label=paste0("<p style='font-size:20px'> <strong>Barrio: </strong>",grupos$barrio_mapa,
-                               "<br><strong>Riesgo: </strong>",grupos$riesgo,
-                               "<br><strong>Cantidad de accidentes: </strong>",grupos$accidentes,
-                               "<br><strong>Tasa de graves: </strong>",grupos$tasa_graves,"</p>"
+                  label=paste0("<p style='font-size:20px'> <strong>Barrio: </strong>",grupos$NOMBRE_BAR,
+                               "<br><strong>Riesgo: </strong>",grupos$Riesgo,
+                               "<br><strong>Comuna: </strong>",grupos$NOMBRE_COM
                   )%>% lapply(htmltools::HTML),
                   
                   
       )%>%
       addTiles()%>%
-      addLegend(position = "bottomright",pal=pal,values = c("Bajo", "Medio", "Alto"))
+      addLegend(position = "bottomright",pal=pal,values = c("No aplica","Bajo", "Moderado", "Alto"))
     
   })
   
