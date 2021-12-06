@@ -9,19 +9,18 @@ library(mapview)
 library(shinycssloaders)
 library(shinyWidgets)
 library(data.table)
-library("ggplot2")
-library("DT")
-library("kableExtra")
-library("tidyverse")
-library("knitr")
-library("sqldf")
-library("reticulate")
-library("FSinR")
-library("caret")
-library("hash")
-library("plotly")
-library("lubridate")
-library("dplyr")
+library(ggplot2)
+library(kableExtra)
+library(tidyverse)
+library(knitr)
+library(sqldf)
+library(reticulate)
+library(FSinR)
+library(caret)
+library(hash)
+library(plotly)
+library(lubridate)
+library(dplyr)
 load("BD_nueva/accidentesMDE2.RData")
 
 # Define UI
@@ -126,8 +125,9 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                              tags$h3("Intervalo de fecha"),
                              dateInput("fechaInicio","Fecha Inicio",value = "2014-07-04",min="2014-07-04",max = "2020-08-31"),
                              dateInput("fechaFinal","Fecha Final",value = "2014-07-05",min="2014-07-04",max = "2020-08-31"),
-                             selectInput("InputCLASE_ACCIDENTE", "Clase de accidente:", choices=c("Todos",unique(accidentes$CLASE_ACCIDENTE))),
-                             selectInput("InputGRAVEDAD_ACCIDENTE", "Gravedad del accidente:", choices=c("Todos",unique(accidentes$GRAVEDAD_ACCIDENTE)))
+                             selectInput("InputCLASE_ACCIDENTE", "Clase de accidente:", choices=c("Todos","Atropello","Caída del ocupante",
+                                                                                                  "Choque", "Incendio", "Otro", "Volcamiento")),
+                             selectInput("InputGRAVEDAD_ACCIDENTE", "Gravedad del accidente:", choices=c("Todos","Con heridos","Con muertos","Solo daños"))
                              
                            ), # sidebarPanel
                            mainPanel(
