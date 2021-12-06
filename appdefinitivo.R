@@ -38,7 +38,8 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                               <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
                               <strong><h1 style='text-align: center'>Presentación</h1></strong>
                               <p style='font-size: 20px;text-align: justify;'>En este aplicativo web se puede encontrar toda la información
-                                  acerca de la accidentalidad en Medellín en los años 2014-2020.
+                                  acerca de la accidentalidad en Medellín en los años 2014-2020. Para más detalle se puede consultar en
+                                  el siguiente <a href='https://rpubs.com/scuartasr/TAE_P1_InformeTecnico'> informe técnico </a>
                               </p>
                               <br>
                               <br>
@@ -101,8 +102,8 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                            ),
                            fluidRow(
                              column(12,
-                                    HTML("<strong><h1 style='text-align: center'>Video Promocional</h1></strong>"),
-                                    HTML("<iframe src='https://drive.google.com/file/d/1cVct8EeiJCJKz0fw_7WZ5IINaP6cyGJo/view?ts=61ad8d28' height=480 style='margin: auto;width: 100%;border: 0px;padding: 10px;display: block;'></iframe>")
+                                    HTML("<strong><h1 style='text-align: center'>Video Promocional</h1></strong>"), 
+                                    HTML("<iframe src='https://drive.google.com/file/d/1cVct8EeiJCJKz0fw_7WZ5IINaP6cyGJo/preview' height=720 style='margin: auto;width: 100%;border: 0px;padding: 10px;display: block;'></iframe>")
                              )
                            ),
                            
