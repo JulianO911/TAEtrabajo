@@ -102,7 +102,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                            fluidRow(
                              column(12,
                                     HTML("<strong><h1 style='text-align: center'>Video Promocional</h1></strong>"),
-                                    HTML("<iframe src='https://vimeo.com/463875912' height=480 style='margin: auto;width: 100%;border: 0px;padding: 10px;display: block;'></iframe>")
+                                    HTML("<iframe src='https://drive.google.com/file/d/1cVct8EeiJCJKz0fw_7WZ5IINaP6cyGJo/view?ts=61ad8d28' height=480 style='margin: auto;width: 100%;border: 0px;padding: 10px;display: block;'></iframe>")
                              )
                            ),
                            
