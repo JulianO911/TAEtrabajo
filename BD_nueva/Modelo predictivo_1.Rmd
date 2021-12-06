@@ -150,7 +150,7 @@ defModeloyPlot <- function(clase,caracteristicas,K){
          group = curva, 
          color = curva)) +
     geom_line() +
-    ggtitle(paste("Datos observados vs datos predichos para",tolower(clase),sep = " ")) +
+    ggtitle(paste("Datos observados vs datos predichos para",tolower(clase),"\n",sep = " ")) +
     labs(y = "Total de accidentes", x = "Fecha") + 
     theme(plot.title = element_text(hjust = 0.5)) +
     labs(color = "Curva") + 
@@ -167,28 +167,28 @@ defModeloyPlot <- function(clase,caracteristicas,K){
 ```{r echo = FALSE, warning = FALSE}
 modelos("Choque")
 ```
-Para predecir los accidentes de choque se utilizarán 4 características y un K=11.
+Para predecir los accidentes de choque se utilizarán 4 características y un K=11. Ya que tiene un MSE más equilibrado en entrenamiento y validación y un porcentaje de variación menor a 15%. MSE en entrenamiento=217.3957 y en validación=245.4324, porcentaje de variación=11.4234.
 
 ## Atropello
 
 ```{r echo = FALSE, warning = FALSE}
 modelos("Atropello")
 ```
-Este modelo utilizará 4 características y un k=6.
+Este modelo utilizará 4 características y un k=6.Con MSE de entrenamiento=13.6848, en validación=13.9533 y un porcentaje de variación=1.9246.
 
 ## Volcamiento
 
 ```{r echo = FALSE, warning = FALSE}
 modelos("Volcamiento")
 ```
-Con la predicción de volcamientos se utilizarán 6 características y un k=12.
+Con la predicción de volcamientos se utilizarán 6 características y un k=12. Con MSE de entrenamiento=5.7122, en validación=6.4358 y un porcentaje de variación=11.2432.
 
 ## Caída del ocupante
 
 ```{r echo = FALSE, warning = FALSE}
 modelos("Caída del ocupante")
 ```
-Respecto a caída del ocupante se usarán 6 características y un k=12.
+Respecto a caída del ocupante se usarán 6 características y un k=12. Con MSE de entrenamiento=15.1528, en validación=19.4027 y un porcentaje de variación=21.9037.
 
 ## Incendio
 
@@ -202,7 +202,7 @@ Ya que según la tabla, los MSE son los mismos y no tienen variación, se puede 
 ```{r echo = FALSE, warning = FALSE}
 modelos("Otro")
 ```
-Por último, en el caso de otros accidentes, se utilizaran 3 características un k=13.
+Por último, en el caso de otros accidentes, se utilizaran 3 características un k=13. Con MSE de entrenamiento=23.74075, en validación=27.1204 y un porcentaje de variación=12.4615.
 
 A continuación se muestran las características escogidas para los modelos de choque, atropello, volcamiento, caída del ocupante, incendio y otro respectivamente:
 
@@ -281,7 +281,7 @@ comparacion2020 <- function(modelo,clase,i){
          group = curva, 
          color = curva)) +
     geom_line() +
-    ggtitle(paste("Datos observados vs datos predichos en 2020 para",tolower(clase),sep = " ")) +
+    ggtitle(paste("Datos observados vs datos predichos en 2020 \npara",tolower(clase),sep = " ")) +
     labs(y = "Total de accidentes", x = "Fecha") + 
     theme(plot.title = element_text(hjust = 0.5)) +
     labs(color = "Curva") + 
