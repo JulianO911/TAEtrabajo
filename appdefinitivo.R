@@ -40,7 +40,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                               <p style='font-size: 20px;text-align: justify;'>En este aplicativo web se puede encontrar toda la información
                                   acerca de la accidentalidad en Medellín en los años 2014-2020. Para más detalle se puede consultar en
                                   el siguiente <a href='https://rpubs.com/scuartasr/TAE_P1_InformeTecnico'> informe técnico </a> y
-                                  <a href='https://github.com/JulianO911/TAE'> repositorio </a>
+                                  <a href='https://github.com/JulianO911/TAE'> repositorio </a>.
                               </p>
                               <br>
                               <br>
