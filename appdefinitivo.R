@@ -32,7 +32,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     column(12,
                                            HTML("
                               <div style='text-align: center;margin-top:80px;'>
-                                <img src='cero accidente.png' width='200px'/>  
+                                <img src='Collision.png' width='200px'/>  
                                   <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
                               </div>
                               <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
@@ -111,7 +111,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                            
                            HTML("
                      <div style='text-align: center;margin-top:80px;'>
-                        <img src='cero accidente.png' width='200px'/>  
+                        <img src='Collision.png' width='200px'/>  
                         <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
                     </div>
                     <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
@@ -158,7 +158,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     column(12,
                                            HTML("
                           <div style='text-align: center;margin-top:80px;'>
-                              <img src='cero accidente.png' width='200px'/>
+                              <img src='Collision.png' width='200px'/>
                               <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
                           </div>
                           <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
@@ -175,20 +175,13 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                            HTML("
                       <strong><h1 style='text-align:center;'>Agrupamiento </h1></strong> 
                       <p style='margin-bottom: 30px;font-size: 20px;text-align: justify;'>
-                      En el mapa de la izquierda se puede visualizar la ciudad de Medellín dividida 
-                      por cada uno de los barrios que lo componen, cada uno se encuentra sombreado con 
-                      un color el cual indica un agrupamiento según el nivel de riesgo respecto a 
-                      accidentalidad. El nivel de riesgo se obtiene a través de la tasa de gravedad de 
-                      los accidentes (fracción de accidentes con herido o fallecido) y el número total 
-                      de accidentes para el periodo entre 2014 y 2020.
+                      En el siguiente mapa se puede visualizar cada uno de los barrios que compone la ciudad de
+                      Medellín, con un color el cual indica un agrupamiento según el nivel de riesgo respecto a 
+                      accidentalidad.
                       <br>
                       <br>
-                      Se puede visualizar en color verde los de bajo riesgo, 
-                      barrios que no necesitan ser intervenidos en temas de accidentalidad; 
-                      en color amarillo los de riesgo medio, los cuales deben analizarse en 
-                      detalle para determinar una posible intervención; en color rojo los barrios a 
-                      los que urge intervenir en temas de accidentalidad y en color gris se encuentran 
-                      algunos barrios no clasificados.
+                      El color verde indica los de bajo riesgo, el color amarillo indica los de riesgo moderado,
+                      el color rojo indica los de alto riesgo y el color gris no aplica.
                       </p>
                     
                       ")
@@ -205,7 +198,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     column(12,
                                            HTML("
                     <div style='text-align: center;margin-top:80px;'>
-                        <img src='cero accidente.png' width='200px'/>
+                        <img src='Collision.png' width='200px'/>
                         <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
                     </div>
                     
