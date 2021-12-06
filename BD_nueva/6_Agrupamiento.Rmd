@@ -8,15 +8,15 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
+Agrupando Barrios de Medellín por accidentes
 
-## Bla bla bla
 
 ```{r}
 library("tidyverse")
 library("summarytools")
 ```
 
-
+Base de datos
 ```{r}
 load("accidentesMDE2.RData")
 ```
@@ -31,11 +31,13 @@ barrios <- accidentes %>%
 ```{r}
 cantidades <- as.vector(barrios$CANTIDAD)
 ```
+Para la preparación del agrupamiento de los barrios por accidente, se separó una base de datos aparte donde tuviéramos las variables a estudiar, tales como, Barrio, Gravedad de accidente y la cantidad de accidentes por barrio. Se realizó un histograma de la variable cantidades para separar por rangos de alto número de accidentes, moderado y bajo y así con la media y la desviación estándar realizamos esta división.
 
 ```{r}
 descr(cantidades)
 hist(cantidades)
 ```
+
 ```{r}
 media = 793
 sd = 979
@@ -48,7 +50,7 @@ for (i in 1:k1) {
 }
 cortesx <- c("Muy bajo", "Bajo", "Moderado", "Alto", "Muy alto", "Grave")
 ```
-
+Luego para tener en cuenta la gravedad de accidentes por barrio se creó un índice de gravedad puesto que esta estaba como una variable categórica, este índice se creó de la siguiente manera 0.7 * muertos, 0.25 * heridos, 0.05 * daños, y así mismo como en la cantidad de accidentes se muestra el grafico para definir Riesgo alto, moderado y bajo.
 
 ```{r}
 agrupador <- accidentes %>%
@@ -111,6 +113,8 @@ f <- ggplot(data = auxiliar, mapping = aes(y = indiceGravedad, x = TOTAL)) +
   geom_point(aes(color = cluster))
 f
 ```
+Teniendo estas dos variables numéricas se busca el K óptimo para la efectiva división de la cantidad de grupos que debe haber para hacer el mapa de color, también se creó un vector extra para agregar a la base de datos en orden de cómo deben aparecer los Barrios en el mapa y su respectiva agrupación (alto, moderado, bajo y no aplica para aquellos en los barrios en los que no se registró accidente).
+
 ```{r}
 auxiliar <- auxiliar %>% 
   select(c(BARRIO, cluster))
@@ -323,7 +327,7 @@ aux$colores[aux$Riesgo == "Moderado"] <- "#ffa333"
 aux$colores[aux$Riesgo == "Bajo"] <- "#006400"
 aux$colores[aux$Riesgo == "No aplica"] <- "#808080"
 ```
-
+Con lo anterior se crea el siguiente mapa, donde se muestra los barrios de Medellín agrupados por colores donde se especifica cómo se divide la ciudad respecto a los accidentes que ocurren en Medellín, con esto se podría tener una idea de en qué lugares de la ciudad es más probable un accidente de alta gravedad, moderada o baja.
 
 ```{r}
 #colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
