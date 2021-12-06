@@ -1,6 +1,12 @@
 ---
 title: "Depuración de la base de datos actualizada"
-author: "Equipo, TAE"
+author:
+  - "Simón Cuartas Rendón"
+  - "Juan José Fúnez García"
+  - "Julián Ospina Murgueítio"
+  - "Deivid Zhang Figueroa"
+  - "Juliana Zuluaga Serna"
+date: "Diciembre de 2021"
 date: "Diciembre 2 de 2021"
 output:
   html_document:

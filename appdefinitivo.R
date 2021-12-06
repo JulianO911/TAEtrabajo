@@ -32,7 +32,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     column(12,
                                            HTML("
                               <div style='text-align: center;margin-top:80px;'>
-                                <img src='Collision.png' width='200px'/>  
+                                <img src='Collision.png' width='500px'/>  
                                   <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
                               </div>
                               <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
@@ -54,7 +54,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                            fluidRow(
                              column(2,offset = 1,align="center",
                                     HTML("
-                           <img src='Simón.png' width='100%'/>
+                           <img src='Simón.jpg' width='100%'/>
                            <p style='text-align:center;'><strong>Simón Cuartas Rendón</strong>
                             <br>Estadística
                            </p>
