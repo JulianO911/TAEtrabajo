@@ -1,22 +1,35 @@
 ---
-title: "6_Agrupamiento"
-author: "Simón Cuartas Rendón"
-date: "3/12/2021"
-output: html_document
+title: "Agrupamiento de los barrios de Medellín según el nivel de accidentalidad"
+author: "Equipo de TAE"
+date: "Diciembre de 2021"
+output:
+  html_document:
+    code_folding: show
+    toc: true
+    theme: paper
+    df_print: paged
+    number_sections: true
 ---
+
+<style>
+body {
+text-align: justify}
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
-Agrupando Barrios de Medellín por accidentes
+
+# Agrupando Barrios de Medellín por accidentes
 
 
-```{r}
+```{r, include = FALSE}
 library("tidyverse")
 library("summarytools")
+library("DT")
 ```
 
-Base de datos
+
 ```{r}
 load("accidentesMDE2.RData")
 ```
@@ -31,11 +44,13 @@ barrios <- accidentes %>%
 ```{r}
 cantidades <- as.vector(barrios$CANTIDAD)
 ```
-Para la preparación del agrupamiento de los barrios por accidente, se separó una base de datos aparte donde tuviéramos las variables a estudiar, tales como, Barrio, Gravedad de accidente y la cantidad de accidentes por barrio. Se realizó un histograma de la variable cantidades para separar por rangos de alto número de accidentes, moderado y bajo y así con la media y la desviación estándar realizamos esta división.
+
+Para la preparación del agrupamiento de los barrios por accidente, se separó una base de datos aparte donde se tenían las variables a estudiar, tales como barrio, gravedad de accidente y la cantidad de accidentes por barrio. Se realizó un histograma de la variable cantidades para separar por rangos de alto número de accidentes, moderado y bajo, y así, con la media y la desviación estándar realizamos esta división.
 
 ```{r}
-descr(cantidades)
-hist(cantidades)
+datatable(descr(cantidades))
+hist(cantidades,
+     main = "Histograma del número de accidentes por barrio")
 ```
 
 ```{r}
@@ -50,9 +65,12 @@ for (i in 1:k1) {
 }
 cortesx <- c("Muy bajo", "Bajo", "Moderado", "Alto", "Muy alto", "Grave")
 ```
-Luego para tener en cuenta la gravedad de accidentes por barrio se creó un índice de gravedad puesto que esta estaba como una variable categórica, este índice se creó de la siguiente manera 0.7 * muertos, 0.25 * heridos, 0.05 * daños, y así mismo como en la cantidad de accidentes se muestra el grafico para definir Riesgo alto, moderado y bajo.
 
-```{r}
+Luego, para tener en cuenta la gravedad de accidentes por barrio se creó un índice de gravedad puesto que esta estaba como una variable categórica, este índice se creó de la siguiente manera: sea $x$ el número de fallecidos que hay por incidentes viales en un barrio, $y$ la cantidad de accidentes viales con heridos en el mismo barrio y $z$ la suma de incidentes que solo dejaron daños materiales. Entonces, el índice de gravedad se define así:
+
+$$índiceGravedad(Barrio) = \frac{0.7x + 0.25*y + 0.05 z}{x + y+ z}$$
+
+```{r, include = FALSE}
 agrupador <- accidentes %>%
         group_by(BARRIO) %>%
           summarise(TOTAL = n(),
@@ -63,16 +81,18 @@ agrupador <- accidentes %>%
 descr(agrupador$indiceGravedad)
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 ggplot(data = agrupador, mapping = aes(y = indiceGravedad, x = TOTAL)) +
   geom_point()
 ```
-```{r}
+
+```{r, echo = FALSE, warning = FALSE}
 auxiliar <- agrupador %>% 
   select(c(BARRIO, TOTAL, indiceGravedad))
 head(auxiliar)
 ```
-```{r}
+
+```{r, echo = FALSE, warning = FALSE}
 mT <- mean(auxiliar$TOTAL)
 sdT <- sd(auxiliar$TOTAL)
 miG <- mean(auxiliar$indiceGravedad)
@@ -82,21 +102,21 @@ auxiliar <- auxiliar %>%
   mutate(iGc = (indiceGravedad - miG)/sdiG)
 ```
 
-```{r}
+```{r, include = FALSE, warning = FALSE}
 library("factoextra")
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 grupos <- fviz_nbclust(auxiliar[, c(4, 5)], kmeans, method = "wss")
 grupos
 k = 3
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 library("stats")
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 k3 <- kmeans(auxiliar[, c(4, 5)], k)
 clusteres <- as.data.frame(k3[1])
 auxiliar <- cbind(auxiliar, clusteres)
@@ -113,34 +133,36 @@ f <- ggplot(data = auxiliar, mapping = aes(y = indiceGravedad, x = TOTAL)) +
   geom_point(aes(color = cluster))
 f
 ```
-Teniendo estas dos variables numéricas se busca el K óptimo para la efectiva división de la cantidad de grupos que debe haber para hacer el mapa de color, también se creó un vector extra para agregar a la base de datos en orden de cómo deben aparecer los Barrios en el mapa y su respectiva agrupación (alto, moderado, bajo y no aplica para aquellos en los barrios en los que no se registró accidente).
 
-```{r}
+Teniendo estas dos variables numéricas se busca el K óptimo para la efectiva división de la cantidad de grupos que debe haber para hacer el mapa de color, también se creó un vector extra para agregar a la base de datos en orden de cómo deben aparecer los barrios en el mapa y su respectiva agrupación (alto, moderado, bajo y no aplica para aquellos en los barrios en los que no se registró accidente). A partir de la gráfica anterior, entonces se puede definir que los barrios con índice de gravedad *bajo* (en verde) son aquellos que tienen bajas cantidades de incidentes y que estos no suelen ser muy graves, mientras que los que tienen índice de gravedad *alto* se destacan por tener una gran cantidad de incidentes viales pero no necesariamente muy graves, siendo los de categoría *moderada* aquellos que presentan poco incidentes viales pero con saldos fatales con frecuencia.
+
+```{r, echo = FALSE, warning = FALSE}
 auxiliar <- auxiliar %>% 
   select(c(BARRIO, cluster))
 
 names(auxiliar[2]) <- "Riesgo"
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 save(auxiliar, file = "agrupamiento.Rmd")
 write.csv(auxiliar,"agrupamiento.csv")
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 rm(list = ls())
 ```
 
-```{r}
+```{r, include = FALSE, warning = FALSE}
 library("leaflet")
 library("rgdal")
 library("mapview")
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 barriosMDE <- readOGR(".",layer="Limite_Barrio_Vereda_Catastral")
 aux <- as.data.frame(barriosMDE)
 ```
+
 ```{r}
 # Cambio de nombres
 barriosMDE$NOMBRE_BAR[5] <- "Los Balsos No. 1"
@@ -229,17 +251,17 @@ barriosMDE$NOMBRE_BAR[346] <- "Héctor Abad Gómez"
 barriosMDE$NOMBRE_BAR[348] <- "Antonio Nariño"
 ```
 
-```{r}
+```{r, include = FALSE, warning = FALSE}
 m=leaflet(barriosMDE)
 m=addTiles(m)
 ```
 
-```{r}
+```{r, include = FALSE, warning = FALSE}
 m=addPolygons(m,popup=barriosMDE$NOMBRE_BAR)
 m=addTiles(m)
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 vector <- c("Bajo","Moderado","Moderado","Moderado","Bajo",
             "Alto","No aplica","Bajo","Bajo","Moderado",
             "Bajo","Bajo","Moderado","Moderado","Bajo",
@@ -312,11 +334,11 @@ vector <- c("Bajo","Moderado","Moderado","Moderado","Bajo",
             "Bajo","Moderado","Moderado")
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 aux["Riesgo"] <- vector
 ```
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 #d90000 ALTO
 #ffa333 MODERADO
 #006400 BAJO
@@ -327,9 +349,10 @@ aux$colores[aux$Riesgo == "Moderado"] <- "#ffa333"
 aux$colores[aux$Riesgo == "Bajo"] <- "#006400"
 aux$colores[aux$Riesgo == "No aplica"] <- "#808080"
 ```
+
 Con lo anterior se crea el siguiente mapa, donde se muestra los barrios de Medellín agrupados por colores donde se especifica cómo se divide la ciudad respecto a los accidentes que ocurren en Medellín, con esto se podría tener una idea de en qué lugares de la ciudad es más probable un accidente de alta gravedad, moderada o baja.
 
-```{r}
+```{r, echo = FALSE, warning = FALSE}
 #colores=sample(x=c("blue","green","yellow", "red", "pink"),size=length(barriosMDE),replace=TRUE)
 m = addPolygons(m,
                 color = aux$colores,

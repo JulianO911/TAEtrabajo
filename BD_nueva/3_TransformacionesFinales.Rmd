@@ -1,7 +1,7 @@
 ---
 title: "Transformaciones finales de la base de datos"
 author: "Equipo de TAE"
-date: "26/11/2021"
+date: "Diciembre de 2021"
 output:
   html_document:
     code_folding: show
