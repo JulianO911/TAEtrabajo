@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/843938/a4b68646aee0427d9f83059bcced0fab
+bundleId: https://api.rpubs.com/api/v1/document/843938/a4b68646aee0427d9f83059bcced0fab
+url: http://rpubs.com/scuartasr/843938
+when: 1638753173.11536
+lastSyncTime: 1638753173.11536

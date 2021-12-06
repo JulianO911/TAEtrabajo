@@ -7,7 +7,6 @@ author:
   - "Deivid Zhang Figueroa"
   - "Juliana Zuluaga Serna"
 date: "Diciembre de 2021"
-date: "Diciembre 2 de 2021"
 output:
   html_document:
     code_folding: show
@@ -37,7 +36,7 @@ library("sqldf")
 
 # Introducción
 
-En el marco del curso de **Técnicas de Aprendizaje Estadístico** de la Universidad Nacional de Colombia, sede Medellín, se pretende analizar la base de datos de accidentalidad vial en la ciudad de Medellín entre los años 2014 y 2020 con el objetivo de realizar predicciones a partir de este documento para los años 2020 y 2021. Para ello, se va a comenzar realizando una exploración de la base de datos que permita hallar inconsistencias, problemas, datos faltantes y errores, entre otros, con la base de datos, de tal manera que pueda ser organizada para poderla emplear adecuadamente en función de los objetivos de este proyecto.
+En el marco del curso de **Técnicas de Aprendizaje Estadístico** de la Universidad Nacional de Colombia, sede Medellín, se pretende analizar la base de datos de accidentalidad vial en la ciudad de Medellín entre los años 2014 y 2020 con el objetivo de realizar predicciones a partir de este documento para los años 2020 y 2021 a partir de los datos publicados por la Alcaldía de Medellín a través de su Secretaría de Movilidad [3]. Para ello, se va a comenzar realizando una exploración de la base de datos que permita hallar inconsistencias, problemas, datos faltantes y errores, entre otros, con la base de datos, de tal manera que pueda ser organizada para poderla emplear adecuadamente en función de los objetivos de este proyecto.
 
 # Lectura de la base de datos
 
@@ -607,7 +606,7 @@ datatable(barrios,
                        "Frecuencia absoluta"))
 ```
 
-Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal forma que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden a los barrios *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección, lo cual lleva a la siguiente tabla:
+Y al inspeccionar la tabla anterior se pueden evidenciar diversos problemas: el primer de ellos es que se desconoce cuál es el tipo de codificación de la base datos, por lo que muchos de los barrios aparecen con nombres extraños en los lugares de los caracteres espaciales del castellano (como por ejemplo: *á*, *é*, *ü* y *ñ*), de manera que se debe comenzar arreglando esto de tal forma que todos los nombres disponibles sean legibles. Asimismo, se tiene que los barrios fueron introducidos en la base de datos de dos formas: una es escribiendo su nombre de pila, como sucede con los barrios *Laureles*, *Moscú* y *Manila*, por ejemplo, pero también de acuerdo con un código numérico de cuatro dígitos, como lo son *0712*, *1015* y *1613*, que corresponden a los barrios *Aures No. 2*, *Bomboná No. 1* y *Altavista*, respectivamente. En ese sentido, es necesario corregir los nombres de los barrios que tengan problemas en su codificación o que han sido reportados de acuerdo con su código. Esto se puede ver mejor en la siguiente tabla, en la cual se enlistan a todos los barrios que están registrados en la base de datos de accidentes. Adicionalmente, se presentan problemas de unicidad para varios barrios que llevan a la existencia de dos niveles distintos que hacen referencia al mismo barrio. Con esto en mente, se procede a su corrección con la ayuda de la información catastral de la Alcaldía de Medellín [4], lo cual lleva a la siguiente tabla:
 
 ```{r}
 # Corrección de barrios con códigos
@@ -970,7 +969,12 @@ accidentes <- accidentes %>%
   rename(Y_MAGNA = Y)
 ```
 
-Ahora bien, al hacer una revisión de la ubicación de los accidentes en un mapa con la ayuda de *QGIS*, que es un software especializado en sistemas de información geográfica (SIG por sus siglas en inglés), se halló que hay diversas observaciones que no están situadas en la ciudad de Medellín, por lo que se procede a la remoción de dichas observaciones de la base de datos para evitar sesgos con respecto a los accidentes que efectivamente se dieron en los límites territoriales de la capital de Antioquia. A continuación se observan dos imágenes con ejemplos de observaciones removidas, en la cual se observa un gran polígono café que corresponde al municipio de Medellín y uno o varios puntos que se asocian a la ubicación del incidente. A continuación se ilustran un par de ejemplos.
+Ahora bien, al hacer una revisión de la ubicación de los accidentes en un mapa con la ayuda de *QGIS*, que es un software especializado en sistemas de información geográfica (SIG por sus siglas en inglés) [5], se halló que hay diversas observaciones que no están situadas en la ciudad de Medellín, por lo que se procede a la remoción de dichas observaciones de la base de datos para evitar sesgos con respecto a los accidentes que efectivamente se dieron en los límites territoriales de la capital de Antioquia. A continuación se observan tres imágenes: la primera donde se ven las ubicaciones de los accidentes observados, donde los que ocurren dentro de la ciudad de Medellín están dentro del polígono de color café, mientras que los que no y son extraídos están por fuera, así como ejemplos de observaciones removidas, en la cual se observa un gran polígono café que corresponde al municipio de Medellín y uno o varios puntos que se asocian a la ubicación del incidente. A continuación se ilustran un par de ejemplos.
+
+![Incidentes de tránsito ocurridos en Medellín](Images/MapaAccidentes.png)
+
+Como se puede observar en la imagen anterior, hay diversos puntos que se salen de los límites territoriales de Medellín, siendo especialmente destacados los que se dan en el municipio de Heliconia, así como en la Avenida Las Palmas del municipio de Envigado que une al sur del Área Metropolitana del Valle de Aburrá con el municipio de Rionegro en el Valle de San Nicolás.
+
 
 ![Incidente de tránsito en el municipio de Itagüí](Images/ITA.jpeg)
 
