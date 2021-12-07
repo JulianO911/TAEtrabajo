@@ -26,8 +26,8 @@ load("./BD_nueva/accidentesMDE2.RData")
 # Define UI
 ui <- fluidPage(theme = shinytheme("yeti"),
                 navbarPage(
-                  "Accidentalidad en Medellín",
-                  tabPanel("Presentación",
+                  "Accidentalidad en Medellin",
+                  tabPanel("Presentacion",
                            fluidRow(id='header1',
                                     column(12,
                                            HTML("
@@ -38,8 +38,8 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                               <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
                               <strong><h1 style='text-align: center'>Presentación</h1></strong>
                               <p style='font-size: 20px;text-align: justify;'>En este aplicativo web se puede encontrar toda la información
-                                  acerca de la accidentalidad en Medellín en los años 2014-2020. Para más detalle se puede consultar en
-                                  el siguiente <a href='https://rpubs.com/scuartasr/TAE_P1_InformeTecnico'> informe técnico </a> y
+                                  acerca de la accidentalidad en Medellin en los años 2014-2020. Para mas detalle se puede consultar en
+                                  el siguiente <a href='https://rpubs.com/scuartasr/TAE_P1_Collision_Informe'> informe técnico </a> y
                                   <a href='https://github.com/JulianO911/TAE'> repositorio </a>.
                               </p>
                               <br>
@@ -57,8 +57,8 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                              column(2,offset = 1,align="center",
                                     HTML("
                            <img src='Simono.jpg' width='100%'/>
-                           <p style='text-align:center;'><strong>Simón Cuartas Rendón</strong>
-                            <br>Estadística
+                           <p style='text-align:center;'><strong>Simon Cuartas Rendon</strong>
+                            <br>Estadistica
                            </p>
                            ")
                                     
@@ -66,8 +66,8 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                              column(2,align="center",
                                     HTML("
                            <img src='Camilo.png' width='100%'/>
-                           <p style='text-align:center;'><strong>Camilo José Fúnez García</strong>
-                            <br>Ingeniería de sistemas
+                           <p style='text-align:center;'><strong>Camilo Jose Funez Garcia</strong>
+                            <br>Ingenieria de sistemas
                            </p>
                            ")
                                     
@@ -76,7 +76,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     HTML("
                            <img src='Juliano.png' width='100%'/>
                            <p style='text-align:center;'><strong>Julián Ospina Murgueitio</strong>
-                            <br>Ingeniería de sistemas
+                            <br>Ingenieria de sistemas
                            </p>
                            ")
                                     
@@ -85,7 +85,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     HTML("
                            <img src='gato.png' width='100%'/>
                            <p style='text-align:center;'><strong>Deivid Zhang Figueroa</strong>
-                            <br>Estadística
+                            <br>Estadistica
                            </p>
                            ")
                                     
@@ -94,7 +94,7 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                     HTML("
                            <img src='Juliana.png' width='100%'/>
                            <p style='text-align:center;'><strong>Juliana Zuluaga Serna</strong>
-                            <br>Estadística
+                            <br>Estadistica
                            </p>
                            ")
                                     
@@ -109,17 +109,17 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                            ),
                            
                   ),
-                  tabPanel("Visualización de Datos",
+                  tabPanel("Visualizacion de Datos",
                            
                            HTML("
                      <div style='text-align: center;margin-top:80px;'>
                         <img src='Collision.png' width='200px'/>  
-                        <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellín</p></strong>
+                        <strong><p style='font-size: 40px;margin-top:-5px'>Accidentalidad en Medellin</p></strong>
                     </div>
                     <hr style='border-top: 1px solid rgba(0, 0, 0, 0.4);'/>
-                    <strong><h1 style='text-align: center'>Visualización de datos </h1></strong>
-                    <p style='margin-bottom: 30px;font-size: 20px'>En la siguiente tabla se podrá visualizar toda la información depurada acerca de la accidentalidad en Medellín, como también un mapa
-                    de la ciudad de Medellín donde se puede visualizar la cantidad de accidentes que hay por barrio.
+                    <strong><h1 style='text-align: center'>Visualizacion de datos </h1></strong>
+                    <p style='margin-bottom: 30px;font-size: 20px'>En la siguiente tabla se podra visualizar toda la informacion depurada acerca de la accidentalidad en Medellin, como tambien un mapa
+                    de la ciudad de Medellin donde se puede visualizar la cantidad de accidentes que hay por barrio.
                     </p>
                     
                   "),
