@@ -1,0 +1,49 @@
+---
+title: "Corrección"
+author: "Simón Cuartas Rendón"
+date: "14/12/2021"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+load("accidentesMDE2.RData")
+```
+
+
+```{r}
+# accidentes <- accidentes %>% 
+#   select(c(FECHA, AÑO, MES, DIAX, HORA, CLASE_ACCIDENTE, DISEÑO, GRAVEDAD_ACCIDENTE, BARRIO, COMUNASMOD, LONGITUD, LATITUD))
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  rename(ANUALIDAD = AÑOX) %>% 
+  rename(INFRAESTRUCTURA = DISEÑO)
+```
+
+```{r}
+accidentes <- accidentes %>% 
+  mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
+                                  "Caída del ocupante" = "Caida del ocupante")) %>% 
+  mutate(GRAVEDAD_ACCIDENTE = recode(GRAVEDAD_ACCIDENTE,
+                                     "Solo daños" = "Solo danos"))
+```
+
+```{r}
+accidentes <- data.table(accidentes)
+```
+
+```{r}
+accidentes[accidentes$GRAVEDAD_ACCIDENTE==]
+```
+
+
+
+
+```{r}
+save(accidentes, file = "accidentesMDE3.RData")
+```
