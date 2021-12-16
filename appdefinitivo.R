@@ -327,11 +327,11 @@ server <- function(input, output) {
           accidentes$FECHA <= input$fechaFinal &
           accidentes$CLASE_ACCIDENTE == input$InputCLASE_ACCIDENTE,]
       
-    }else if(input$InputGRAVEDAD_ACCIDENTE == "Todos" && input$InputGRAVEDAD_ACCIDENTE != "Todos"){
+    }else if(input$InputCLASE_ACCIDENTE == "Todos" && input$InputGRAVEDAD_ACCIDENTE != "Todos"){
       stateFilter<- accidentes[
         accidentes$FECHA >= input$fechaInicio & 
           accidentes$FECHA <= input$fechaFinal &
-          accidentes$GRAVEDAD_ACCIDENTE == input$InputGRAVEDAD_ACCIDENTE,]
+          accidentes$GRAVEDAD_ACCIDENTE == input$InputGRAVEDAD_ACCIDENTE, ]
       
     }else if(input$InputGRAVEDAD_ACCIDENTE != "Todos" && input$InputGRAVEDAD_ACCIDENTE != "Todos"){
       stateFilter<- accidentes[ 
