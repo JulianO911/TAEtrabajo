@@ -5,10 +5,10 @@ account: juliano911
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 5334177
-bundleId: 5382392
+bundleId: 5382530
 url: https://juliano911.shinyapps.io/TAEtrabajo/
-when: 1639702962.51523
-lastSyncTime: 1639702962.51523
+when: 1639706759.7444
+lastSyncTime: 1639706759.7444
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: 9_InformeTecnico.html|9_InformeTecnico.Rmd|CorreccionBD.Rmd|incidentes_viales.csv|README.md|Readme.txt|BD_nueva

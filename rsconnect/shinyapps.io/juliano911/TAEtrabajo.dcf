@@ -1,0 +1,14 @@
+name: TAEtrabajo
+title: TAEtrabajo
+username:
+account: juliano911
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5334177
+bundleId: 5382678
+url: https://juliano911.shinyapps.io/TAEtrabajo/
+when: 1639711155.6516
+lastSyncTime: 1639711155.6516
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: 9_InformeTecnico.html|9_InformeTecnico.Rmd|CorreccionBD.Rmd|incidentes_viales.csv|README.md|Readme.txt|BD_nueva

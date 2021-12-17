@@ -304,14 +304,12 @@ comparacion2020(modeloOtro,"Otro",3)
 
 El comportamiento que tienen los modelos, según la gráficas, es un resultado esperado según los datos de los años anteriores. Sin embargo, los datos reales muestran una caída a mediados de marzo. Esto claramente se debe a la pandemia ocasionada por el nuevo coronavirus Covid-19, lo cual produjo que el tránsito se redujera y por ende, también el número de accidentes. A los modelos le era imposible saber que un suceso de esta magnitud ocurriera, por ende es normal que para mediados de marzo se proyecte un comportamiento muy diferente al real.
 
-```{r include=FALSE}
-save(modeloChoque,file = "ModeloChoque.RData")
-save(modeloAtropello,file = "ModeloAtropello.RData")
-save(modeloVolcamiento,file = "ModeloVolcamiento.RData")
-save(modeloCaida,file = "ModeloCaida.RData")
-save(modeloIncendio,file = "ModeloIncendio.RData")
-save(modeloOtro,file = "ModeloOtro.RData")
+```{r}
+save(defModeloyPlot,file = "funcion_modelo.RData")
 ```
+
+
+
 
 
 

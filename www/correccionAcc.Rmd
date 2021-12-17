@@ -1,0 +1,26 @@
+---
+title: "Untitled"
+author: "Julián Ospina"
+date: "16/12/2021"
+output: html_document
+---
+```{r}
+library(tidyverse)
+```
+```{r}
+load("accFechaTipo.RData")
+```
+
+```{r}
+accFechaAcc
+```
+```{r}
+accFechaAcc <- accFechaAcc %>% 
+  mutate(CLASE_ACCIDENTE = recode(CLASE_ACCIDENTE,
+                                  "Caída del ocupante" = "Caida del ocupante"))
+```
+```{r}
+save(accFechaAcc,file = "accFechaTipo.RData")
+```
+
+
