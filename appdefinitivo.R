@@ -20,7 +20,7 @@ library(hash)
 library(plotly)
 library(lubridate)
 library(dplyr)
-load("accidentesMDE3.RData")
+load("www/accidentesMDE3.RData")
 
 # Define UI
 ui <- fluidPage(theme = shinytheme("yeti"),
@@ -271,9 +271,9 @@ ui <- fluidPage(theme = shinytheme("yeti"),
 
 # Define server function  
 server <- function(input, output) {
-  barrios_med=readOGR("BD_nueva/Mapa/Limite_Barrio_Vereda_Catastral.shp",layer="Limite_Barrio_Vereda_Catastral") # Corregir
+  barrios_med=readOGR("www/Limite_Barrio_Vereda_Catastral.shp",layer="Limite_Barrio_Vereda_Catastral") # Corregir
   nombres_barrios=iconv(barrios_med@data$NOMBRE,"UTF-8","ISO_8859-1") # Corregir
-  grupos <- read.csv(file = 'pruebadecsv.csv' ) # Corregir
+  grupos <- read.csv(file = 'www/pruebadecsv.csv' ) # Corregir
   colorMaker <- colorFactor(palette = c("#808080", "#006400", "#ffa333","#d90000"), 
                             levels = c("No aplica", "Bajo", "Moderado", "Alto"))
   pal <- colorFactor(
@@ -494,12 +494,12 @@ server <- function(input, output) {
   
   
   # Cargar modelos
-  load("ModeloAtropello.Rdata")
-  load("ModeloCaida.Rdata")
-  load("ModeloChoque.Rdata")
-  load("ModeloIncendio.Rdata")
-  load("ModeloOtro.Rdata")
-  load("ModeloVolcamiento.Rdata")
+  load("www/ModeloAtropello.Rdata")
+  load("www/ModeloCaida.Rdata")
+  load("www/ModeloChoque.Rdata")
+  load("www/ModeloIncendio.Rdata")
+  load("www/ModeloOtro.Rdata")
+  load("www/ModeloVolcamiento.Rdata")
   festivos <- diasFestivos()
   
   
